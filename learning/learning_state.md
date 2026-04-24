@@ -1,9 +1,9 @@
 # LEARNING STATE
 
 ## Current Position
-- **Ring: 1 of 31** (learning spiral = 26; build-only rings 27–31 for adversarial + real-world phases)
-- **Active Concept:** 1–4 (trading, futures, perpetual, exchange)
-- **Status:** FRESH START — reset 2026-04-23. Prior R1–R5 learning progress wiped by user choice. Behavioral calibration + vocabulary preserved below (tutor memory, not progress).
+- **Ring: 3 of 31** (learning spiral = 26; build-only rings 27–31 for adversarial + real-world phases)
+- **Active Concept:** 10–14 (counterparty problem, AMM, x·y=k, price from reserves, peg)
+- **Status:** R1 + R2 closed 2026-04-23 (same session, chunked delivery). R2 covered long/short symmetry, PnL formula, zero-sum property, collateral vs margin, leverage = inverse margin ratio. Doc deliverables dropped per user directive. User self-paced with "move" — no verification question asked at close (honoring self-pacing).
 - **Mode (new, per updated CLAUDE.md):** learning + building in lockstep. Every ring ships BOTH a concept understanding AND a code artifact from `drift-build/README.md`. User writes every line of code; tutor guides with "now write X" prompts.
 
 ---
@@ -38,11 +38,11 @@
 ## Progress Overview
 
 ### PHASE 1 — THE WORLD
-- [ ] **Ring 1**: Trading, futures, perpetual, exchange — **UP NEXT**
-- [ ] Ring 2: Long, short, PnL, collateral, margin, leverage
+- [x] **Ring 1**: Trading, futures, perpetual, exchange — closed 2026-04-23 (re-anchor; doc deliverables dropped per user directive)
+- [x] **Ring 2**: Long, short, PnL, collateral, margin, leverage — closed 2026-04-23 (chunked delivery, user self-paced with "move")
 
 ### PHASE 2 — THE ENGINE
-- [ ] Ring 3: AMM, constant product, price from reserves, peg
+- [ ] **Ring 3**: AMM, constant product, price from reserves, peg — **UP NEXT**
 - [ ] Ring 4: Solana accounts, four pillars, precision, safe math
 
 ### PHASE 3 — THE TRADE

@@ -1,9 +1,9 @@
 # LEARNING STATE
 
 ## Current Position
-- **Ring: 3 of 31** (learning spiral = 26; build-only rings 27–31 for adversarial + real-world phases)
-- **Active Concept:** 10–14 (counterparty problem, AMM, x·y=k, price from reserves, peg)
-- **Status:** R1 + R2 closed 2026-04-23 (same session, chunked delivery). R2 covered long/short symmetry, PnL formula, zero-sum property, collateral vs margin, leverage = inverse margin ratio. Doc deliverables dropped per user directive. User self-paced with "move" — no verification question asked at close (honoring self-pacing).
+- **Ring: 6 of 31** (learning spiral = 26; build-only rings 27–31 for adversarial + real-world phases)
+- **Active Concept:** 25–31 (Order struct, OrderType enum, OrderParams, lifecycle, reduce-only, post-only, IOC)
+- **Status:** R5 closed 2026-04-25. Concept side: PerpPosition as one row in User.perp_positions[8], 4 core fields + market_index, signed-i64 base_asset_amount encoding (sign=direction, magnitude=size), opposite-sign quote w/ IN/OUT convention, quote_entry vs quote_break_even differ by fees, PositionDirection enum NOT stored on PerpPosition (sign of base_asset_amount derives it). Build side: created `state/` module + `state/user.rs` with mini PerpPosition (5 fields incl. market_index, base_asset_amount, quote_asset_amount, quote_entry_amount, quote_break_even_amount), full doc comments + precision annotations on each field. User asked sharp question about per-market decimals → confirmed BASE_PRECISION is virtual normalized scale (perps move no base tokens, only USDC). Build clean.
 - **Mode (new, per updated CLAUDE.md):** learning + building in lockstep. Every ring ships BOTH a concept understanding AND a code artifact from `drift-build/README.md`. User writes every line of code; tutor guides with "now write X" prompts.
 
 ---
@@ -42,12 +42,12 @@
 - [x] **Ring 2**: Long, short, PnL, collateral, margin, leverage — closed 2026-04-23 (chunked delivery, user self-paced with "move")
 
 ### PHASE 2 — THE ENGINE
-- [ ] **Ring 3**: AMM, constant product, price from reserves, peg — **UP NEXT**
-- [ ] Ring 4: Solana accounts, four pillars, precision, safe math
+- [x] **Ring 3**: AMM, constant product, price from reserves, peg — closed 2026-04-24 (chunked bites, incl. repeg cost + code walk)
+- [x] **Ring 4**: Solana accounts, four pillars, precision, safe math — closed 2026-04-25 🚀 first Rust shipped (constants, error, safe_math)
 
 ### PHASE 3 — THE TRADE
-- [ ] Ring 5: PerpPosition struct, base/quote, direction
-- [ ] Ring 6: Order struct, types, lifecycle, reduce-only, post-only
+- [x] **Ring 5**: PerpPosition struct, base/quote, direction — closed 2026-04-25 (struct shipped, build clean)
+- [ ] **Ring 6**: Order struct, types, lifecycle, reduce-only, post-only — **UP NEXT**
 - [ ] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill
 - [ ] Ring 8: Position updates: open/increase/decrease/close — 🏁 **M1**
 

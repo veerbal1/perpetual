@@ -1,9 +1,9 @@
 # LEARNING STATE
 
 ## Current Position
-- **Ring: 6 of 31** (learning spiral = 26; build-only rings 27–31 for adversarial + real-world phases)
-- **Active Concept:** 25–31 (Order struct, OrderType enum, OrderParams, lifecycle, reduce-only, post-only, IOC)
-- **Status:** R5 closed 2026-04-25. Concept side: PerpPosition as one row in User.perp_positions[8], 4 core fields + market_index, signed-i64 base_asset_amount encoding (sign=direction, magnitude=size), opposite-sign quote w/ IN/OUT convention, quote_entry vs quote_break_even differ by fees, PositionDirection enum NOT stored on PerpPosition (sign of base_asset_amount derives it). Build side: created `state/` module + `state/user.rs` with mini PerpPosition (5 fields incl. market_index, base_asset_amount, quote_asset_amount, quote_entry_amount, quote_break_even_amount), full doc comments + precision annotations on each field. User asked sharp question about per-market decimals → confirmed BASE_PRECISION is virtual normalized scale (perps move no base tokens, only USDC). Build clean.
+- **Ring: 7 of 31** (learning spiral = 26; build-only rings 27–31 for adversarial + real-world phases)
+- **Active Concept:** 32–37 (Dutch auctions, keepers, fill flow, fees-on-fill)
+- **Status:** R6 closed 2026-04-26. Concept side: Order vs OrderParams trust split (program-only fields: slot/order_id/status/existing_position_direction), OrderType (Market/Limit + 3 deferred), OrderStatus lifecycle (Init→Open→Filled/Canceled), reduce_only as cap-not-flip safety, post_only (must be maker), IOC (fill now or cancel). Build side: 3 enums + Order (12 fields) in state/user.rs + OrderParams (9 fields) in state/order_params.rs, all precision-annotated, build clean. DEFERRED to R7: User account struct (#[account] with orders[16] + perp_positions[8]), place_perp_order instruction handler, auction fields (auction_duration/start/end). R6 was data model only; R7 brings dynamics + accounts + first instruction handler.
 - **Mode (new, per updated CLAUDE.md):** learning + building in lockstep. Every ring ships BOTH a concept understanding AND a code artifact from `drift-build/README.md`. User writes every line of code; tutor guides with "now write X" prompts.
 
 ---
@@ -47,8 +47,8 @@
 
 ### PHASE 3 — THE TRADE
 - [x] **Ring 5**: PerpPosition struct, base/quote, direction — closed 2026-04-25 (struct shipped, build clean)
-- [ ] **Ring 6**: Order struct, types, lifecycle, reduce-only, post-only — **UP NEXT**
-- [ ] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill
+- [x] **Ring 6**: Order struct, types, lifecycle, reduce-only, post-only — closed 2026-04-26 (3 enums + Order + OrderParams shipped, build clean)
+- [ ] **Ring 7**: Dutch auctions, keepers, fill flow, fees-on-fill — **UP NEXT**
 - [ ] Ring 8: Position updates: open/increase/decrease/close — 🏁 **M1**
 
 ### PHASE 4 — THE PRICING ENGINE

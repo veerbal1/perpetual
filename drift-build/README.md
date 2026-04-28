@@ -867,6 +867,21 @@ afternoon**.
 - **Sat:** refactor, polish, or deeper reading.
 - **Sun:** off, protected.
 
+### Bi-weekly Cold Recall
+
+Every two weeks, Aman picks a random closed ring. Veerbal whiteboards the
+mechanism cold — no source files, no notes, no diagrams. Five minutes max.
+The point is to surface decay before it ossifies.
+
+- **Pass:** continue.
+- **Fail:** ring reopens for one session — re-read the Drift source files
+  cited in the ring, re-record the 5-minute Loom from §4 Interview-Critical
+  Gates, then close it again.
+
+This is calibration, not punishment. The forgetting curve is real across a
+6+ month build, and ring vocabulary atrophies fastest. Bi-weekly cold recall
+is the cheapest defense; skip it for one cycle and the gap shows up at R20.
+
 Daily minimum during build catch-up:
 - one Drift source file opened;
 - one `mini-drift` artifact advanced;

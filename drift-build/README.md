@@ -80,16 +80,17 @@ rewriting).
 
 ---
 
-## 2 · The Four Tracks
+## 2 · The Three Tracks
 
-Rings drive all four tracks in parallel — not all tracks activate at every ring.
+Rings drive three tracks in parallel — not all tracks activate at every ring.
 
 | Track | What | Activates | Purpose |
 |-------|------|-----------|---------|
-| **A · `mini-drift` (Anchor program)** | The on-chain perp protocol, rebuilt ring by ring | R5 | Core hiring artifact. This is what you're really building. |
-| **B · `drift-keeper` (TS bot)** | Off-chain bots run against **real Drift devnet** — filler, liquidator, funding cranker | R10 | Proves you can read Drift's live state + SDK. Hiring signal: "he's already in our codebase." |
-| **C · `mini-drift-web` (React)** | Minimal UI — deposit / trade / position / funding / liq-price on your program | R8 | Makes it demoable in one link. Vercel URL on resume. |
-| **D · Content & journal** | Per-ring docs in `docs/rings/`, 4 milestone blog posts, 3 Loom walkthroughs, final design journal, **daily Twitter build-in-public** | continuous | Converts tacit understanding → legible proof. Interview gold. Twitter is the Solana hiring network. |
+| **A · `mini-drift` (Anchor program)** | The on-chain perp protocol, rebuilt ring by ring | R5 | The thing you're really building. |
+| **B · `drift-keeper` (TS bot)** | Off-chain bots run against **real Drift devnet** — filler, liquidator, funding cranker | R10 | Proves you can read Drift's live state + SDK. |
+| **C · `mini-drift-web` (React)** | Minimal UI — deposit / trade / position / funding / liq-price on your program | R8 | Makes it demoable end-to-end. |
+
+No doc/blog/Loom track. The deliverable per ring is **working code + tests**. If you want to write something later because you have something to say, that's a separate decision — not a checkbox in this plan.
 
 ---
 
@@ -103,8 +104,8 @@ Each milestone is a *demo moment* you could screen-share in a hiring loop.
 | **M2** | R9–R14 | *"Real pricing"* | Devnet: position prices off Pyth SOL/USD, spreads widen on imbalance, funding cranks hourly. |
 | **M3** | R15–R18 | *"Full risk"* | Devnet: deposit USDC → open 10x SOL long → UI shows initial margin, maintenance margin, liq price, unrealized PnL live. |
 | **M4** | R19–R21 | *"Can liquidate"* | Devnet: stress-move Pyth push oracle, your liquidator bot atomically takes the underwater position, insurance fund absorbs residual. |
-| **M5** | R22–R26 | *"Ship"* | Vercel URL + README + 3 blogs + 3 Looms + a tagged `v1.0.0` release. |
-| **M6** | R27–R31 | *"Hardened + contributed"* | Threat model + fuzz report + audit react-blog (#4) + 30d live keeper dashboard + merged PR to `drift-labs/keeper-bots-v2` (or disclosed bounty). |
+| **M5** | R22–R26 | *"Ship"* | Vercel URL + tagged `v1.0.0` release on devnet. |
+| **M6** | R27–R31 | *"Hardened + contributed"* | Security regression tests + fuzz harnesses with 24h+ runs + 30d live keeper dashboard + merged PR to `drift-labs/keeper-bots-v2` (or disclosed bounty). |
 
 ---
 
@@ -122,7 +123,6 @@ Every ring's deliverable must pass these before you move on. This is the
 7. **Precision constants centralized.** `math/constants.rs` is the only place `PRICE_PRECISION`, `BASE_PRECISION`, `QUOTE_PRECISION`, `FUNDING_RATE_PRECISION`, `MARGIN_PRECISION` live. No magic numbers in business logic.
 8. **Account size documented.** Every `#[account]` struct has a comment with byte-by-byte size derivation and `LEN` constant.
 9. **Atomic commits.** One logical change per commit. Message format: `ring-XX: <verb> <thing>`. No "wip" commits on `main`.
-10. **Docs per ring.** Each ring closes with `docs/rings/RNN-<slug>.md` in *your own words* — Drift's mechanism, why it exists, your implementation choices, where you diverged and why.
 
 ---
 
@@ -179,16 +179,13 @@ mini-drift/                               ← single repo, single portfolio URL
 │   └── ...
 ├── app/                                  ← mini-drift-web (Next.js + Vercel)
 ├── keeper/                               ← drift-keeper bot (TS, runs vs REAL Drift devnet)
-├── sdk/                                  ← TS client for your program (auto-generated + hand-rolled helpers)
-└── docs/
-    ├── rings/                            ← RNN-<slug>.md per ring (track D)
-    ├── diagrams/                         ← architecture, data flow, liq cascade
-    ├── blog/                             ← 3 milestone blog posts
-    └── design-journal.md                 ← long-form decisions log
+└── sdk/                                  ← TS client for your program (auto-generated + hand-rolled helpers)
 ```
 
-One repo = one resume bullet. Do not split into 3 repos. The monorepo *is* the
-portfolio.
+No `docs/` tree scaffolded. If you decide later you want diagrams or a journal,
+add it then. Don't pre-create folders to be filled with prose.
+
+One repo. Don't split into three.
 
 ---
 
@@ -206,28 +203,15 @@ portfolio.
 ---
 
 ### PHASE 1 — THE WORLD (R1–R2)
-*No Anchor code yet. Set up the repo, write the vision, own the language.*
+*Pure learning rings. No code, no doc deliverable.*
 
 #### Ring 1 — *What is a perp* [`learning R1`]
 - **Concept:** trading, futures, perpetuals, the exchange
-- **Study:** none in code yet; Drift docs at https://drift-labs.github.io/v2-teacher/ (skim intro)
-- **Neurons:** none (base layer)
-- **Build:**
-  - `git init` the `mini-drift` repo
-  - Root `README.md` skeleton with vision, monorepo layout, empty Milestone checkboxes
-  - `docs/rings/R01-what-is-a-perp.md` — your own 800-word explainer: trading → futures → perp → exchange. No jargon.
-- **Tests:** none
-- **Est.:** 0.5 day
-- **Demo:** "Here's the repo. Here's how I explain a perp in plain English."
+- **Build:** none. Concept lands in the learning track.
 
 #### Ring 2 — *Your first trade* [`learning R2`]
 - **Concept:** long/short/PnL/collateral/margin/leverage
-- **Study:** none in code
-- **Neurons:** R1
-- **Build:** `docs/rings/R02-long-short-leverage.md` — worked numeric scenarios for long $200 10 SOL @ $100, short 5 SOL @ $200, 5x vs 20x leverage PnL tables.
-- **Tests:** Your worked arithmetic must match a spreadsheet (track D: commit the `.xlsx` or a Python notebook alongside).
-- **Est.:** 0.5 day
-- **Demo:** "Here are the 4 invariants of PnL arithmetic, with numbers."
+- **Build:** none. Concept lands in the learning track.
 
 ---
 
@@ -240,12 +224,8 @@ portfolio.
   - `programs/drift/src/math/amm.rs` — just skim `calculate_price`, `calculate_quote_asset_amount_swapped`
   - `programs/drift/src/math/constants.rs` — PRICE_PRECISION = 1e6, BASE_PRECISION = 1e9, AMM_RESERVE_PRECISION = 1e9
 - **Neurons:** R2 (counterparty problem motivates AMM)
-- **Build:**
-  - `Cargo.toml` workspace + empty `programs/mini-drift` crate (don't `anchor init` yet; Ring 4 does that)
-  - `docs/rings/R03-vamm.md` with a spreadsheet: trace 5 sequential trades through an `x*y=k` vAMM and show how price drifts
-- **Tests:** none (spreadsheet only)
-- **Est.:** 1 day
-- **Demo:** Walk a recruiter through the spreadsheet: "Trade 1 moved price 0.4%, trade 2 moved it 0.6%, here's why."
+- **Build:** none. Concept lands in the learning track. (Optional self-check: trace 5 sequential trades through `x*y=k` on a scratchpad to see price drift.)
+- **Est.:** part of learning ring
 
 #### Ring 4 — *Going on-chain* [`learning R4`]
 - **Concept:** accounts, four pillars, fixed-point, safe math
@@ -423,8 +403,7 @@ portfolio.
 - **Tests:** 🎯 funding vectors from `math/funding.rs::tests` — mark above oracle (longs pay shorts), mark below (shorts pay longs), capped case, zero-OI case.
 - **Est.:** 4 days
 - **🚀 Track B milestone:** your keeper bot now has a second command: `funding-crank` — watches your devnet deployment, cranks funding once per hour.
-- **🏁 Demo (M2):** "Devnet recording: I open long, time-warp 2 hours, funding has accrued, next close realizes the funding payment. Numbers match my spreadsheet."
-- **📝 Blog #1 publishes here:** *"Rebuilding Drift's funding rate from first principles."*
+- **🏁 Demo (M2):** "Devnet recording: I open long, time-warp 2 hours, funding has accrued, next close realizes the funding payment."
 
 ---
 
@@ -485,7 +464,6 @@ portfolio.
 - **Tests:** multi-position scenarios: 2 perp positions + 1 spot borrow + unsettled funding; total collateral and requirement both line up.
 - **Est.:** 4 days
 - **🏁 Demo (M3):** UI shows live: total collateral, initial margin used, maintenance margin, **liquidation price**. Move the oracle → liq price moves.
-- **📝 Blog #2 publishes here:** *"Portfolio margin on Solana: how Drift turns 200 oracle ticks into one number."*
 
 #### Ring 19 — *PnL settlement* [`learning R19`]
 - **Concept:** PnL pool, settling +/-, imbalance, divergence checks
@@ -531,8 +509,7 @@ portfolio.
   - `controller/insurance.rs::resolve_perp_bankruptcy` — IF pays residual; if IF insufficient, socialize loss across winning positions in same market
 - **Tests:** residual covered by IF, residual exceeding IF triggers socialized loss.
 - **Est.:** 5 days
-- **🏁 Demo (M4):** "End-to-end devnet stress run: hour-long recording of 5 traders, oracle swings, 3 liquidations, 1 bankruptcy covered by IF, 1 partial socialization."
-- **📝 Blog #3 publishes here:** *"Why insurance funds exist: anatomy of a Solana perp liquidation cascade."*
+- **🏁 Demo (M4):** "End-to-end devnet stress run: 5 traders, oracle swings, 3 liquidations, 1 bankruptcy covered by IF, 1 partial socialization."
 
 ---
 
@@ -593,12 +570,10 @@ portfolio.
   - Complete event coverage audit — every state change emits an event
   - `PerpMarketMap` / `SpotMarketMap` / `OracleMap` for efficient remaining-accounts loading
   - CI: GitHub Actions running `anchor build` + `anchor test` + `cargo clippy -- -D warnings`
-  - **Deploy to devnet with public program ID in README**
+  - **Deploy to devnet with public program ID**
   - **Vercel deployment of `app/`**
-  - `docs/design-journal.md` — final long-form writeup
-  - 🎬 **Loom #1**: 5-min codebase tour. **#2**: 5-min liquidation cascade. **#3**: 5-min hiring pitch — "what I learned, what I'd do differently, what I'd build next."
 - **Est.:** 1 week
-- **🏁 Demo (M5):** Public Vercel URL + public program ID + tagged `v1.0.0` release + README with demo GIF + 3 blog posts + 3 Looms.
+- **🏁 Demo (M5):** Public Vercel URL + public program ID + tagged `v1.0.0` release on devnet.
 
 ---
 
@@ -612,16 +587,16 @@ portfolio.
   - Public Drift audit reports (OtterSec / Neodyme / Zellic on GitHub)
   - Post-mortems: Mango exploit (Oct 2022), Aries Markets (2023), any perp-specific incident write-up
 - **Neurons:** R9 (AMM surface), R14 (funding crank window), R17–18 (margin), R20–21 (liquidation + IF)
-- **Build:** `docs/security/threat-model.md` with **15+ concrete attack scenarios** grouped by category:
+- **Build:** **15+ concrete attack scenarios → 15+ regression tests in `programs/mini-drift/tests/security/`**, grouped by category:
   - **Oracle:** stale price, confidence-interval spoofing, cross-venue manipulation, Pyth publisher collusion
   - **Timing / MEV:** sandwich on funding crank, back-run liquidation, JIT front-run, priority-fee DoS on keepers
   - **Rounding / precision:** balance inflation via repeated dust deposits, off-by-one in IMF, rounding-direction exploit in PnL settlement
   - **Solvency:** IF drain via repeated bankruptcies, socialized-loss gaming, arb between mark and oracle at settle
   - **Logic:** reduce-only bypass, post-only slide-through, reentrancy via SPL CPI, privilege escalation on admin ix
-  - For each: *attack · prerequisites · impact · mitigation in mini-drift*
-- **Tests:** for each "mitigation in mini-drift," add a regression test asserting the attack fails
+  - Each test name encodes the attack; each test's setup proves the prereqs; each assertion proves the mitigation. The test file IS the threat model.
+- **Tests:** the build IS the tests
 - **Est.:** 3 days
-- **Demo:** "Here's a 20-page threat model. Pick any attack number 1–15 and I'll walk the exploit + the mitigation."
+- **Demo:** "Pick any test in `tests/security/` — I'll walk the exploit it's pinning down and the mitigation in code."
 
 #### Ring 28 — *Fuzzing*
 - **Concept:** surface bugs random inputs find that humans miss
@@ -644,14 +619,13 @@ portfolio.
 - **Study:**
   - Pick **one** public Drift audit report (OtterSec has several on `github.com/otter-sec`). Read end-to-end.
   - Read 2 other perp audits for calibration (Perpetual Protocol v2 audits, dYdX audits — all public)
-- **Neurons:** R27 (your own threat model is about to look naive next to professionals'), R28 (fuzzing vs human review — complementary)
+- **Neurons:** R27 (your own attack tests will look naive next to professionals'), R28 (fuzzing vs human review — complementary)
 - **Build:**
-  - `docs/security/audit-replication.md` — pick **3 findings applicable to your codebase**. For each: *auditor's words · my words · my patch*.
-  - Update `docs/security/threat-model.md` with any attack categories the audit surfaced that you missed (this is usually humbling and valuable)
-  - 📝 **Blog #4 publishes here:** *"What I learned reading a real perp DEX audit report."*
-- **Tests:** regression test per patched finding
+  - Pick **3 findings applicable to your codebase**. For each: write the patch in mini-drift + a regression test in `tests/security/` whose name cites the audit (e.g. `ottersec_2023_<finding_id>_<short_desc>`).
+  - If the audit surfaces an attack category your R27 tests missed, add the new tests too.
+- **Tests:** one regression test per patched finding (named after the audit's finding ID)
 - **Est.:** 5 days
-- **🏁 Demo (M6-A):** "I read [OtterSec]'s Drift report cover-to-cover. Three findings applied to my code too — here are the patches and the regression tests."
+- **🏁 Demo (M6-A):** "Three Drift audit findings reapplied here — point at the test, I'll walk the original auditor's analysis and my patch."
 
 ---
 
@@ -667,7 +641,6 @@ portfolio.
   - Deploy to a cheap VPS (DigitalOcean $5/mo droplet works) running against **Drift devnet** (not your mini-drift)
   - Instrumentation: uptime %, fills attempted / succeeded, oracle-staleness events, RPC error rate, priority-fee spend
   - Simple public dashboard: single-page Vercel app reading a JSON stats file the bot writes every hour
-  - **Weekly tweet thread** (track D amplification): *"Week N of live keeper: X fills, Y% uptime, Z interesting failure I hit."*
   - **Acceptance bar:** 30 consecutive days of ≥95% uptime, no manual intervention in any ≥48h window
 - **Tests:** 48h pre-flight dry run clean before starting the 30-day clock
 - **Est.:** 3 days active build, then 30 calendar days of background clock (kicks off at R20)
@@ -690,77 +663,34 @@ portfolio.
 
 ---
 
-## 7 · Pre-Ring Catch-Up (Current State: 2026-04-23)
+## 7 · Pre-Ring Catch-Up (Current State: 2026-04-28)
 
-You are on **learning R6**, but the build track is behind — `learning_state.md`
-puts you at *"R1 catch-up"*. Before resuming R6 learning, the build track needs
-to ship R1 → R5 artifacts in a compressed pass:
+R1–R3 are pure-learning rings — no build artifact owed.
 
-| Ring | Already understood (from learning) | Build artifact still owed | Est. |
-|------|-------------------------------------|----------------------------|------|
-| R1 | ✅ | repo init + README skeleton + `docs/rings/R01-*.md` | 0.5 day |
-| R2 | ✅ | `docs/rings/R02-*.md` + leverage spreadsheet | 0.5 day |
-| R3 | ✅ (derived x\*y=k independently) | `docs/rings/R03-*.md` + AMM trade-trace spreadsheet | 1 day |
-| R4 | ✅ (knows checked_mul, scalers) | `anchor init` + `math/constants.rs` + `math/safe_math.rs` + `error.rs` | 1 day |
-| R5 | ✅ (delivered 2026-04-20) | `state/user.rs::PerpPosition` + `initialize_user` ix + anchor test | 1 day |
+R4–R6 structs and constants are typed in `mini-drift/`. Instructions, tests,
+and the orchestrating `User` account are not yet shipped:
 
-**~4 days of catch-up**, then you resume **R6 learning + R6 build in lockstep**
-— concept first, then ship the `Order` struct and `place_perp_order` in the
-same ring, per the quality bar in §4.
+| Ring | What's on disk | What's still owed |
+|------|----------------|-------------------|
+| R4 | `math/constants.rs`, `math/safe_math.rs`, `error.rs` typed | unit tests for every checked op (overflow / underflow / boundary) |
+| R5 | `PerpPosition` struct typed | `User` account · `initialize_user` ix · anchor test |
+| R6 | `Order`, `OrderType` (Market/Limit), `OrderStatus`, `PositionDirection`, `OrderParams` typed | `User.orders: [Order; 16]` · `place_perp_order` ix · `OrderRecord` event · happy path + reject tests |
 
-From R7 onward, every ring is **learning in the morning, building in the
-afternoon**.
+From R7 onward, learning and building run in lockstep — concept first, then
+ship the matching code + tests in the same ring.
 
 ---
 
-## 8 · Hiring Narrative (how to frame this on a resume / in interviews)
-
-**Resume bullet — lead line:**
-> *Built `mini-drift`: a Solana perpetuals DEX with vAMM pricing, portfolio
-> margin, funding, liquidations, and insurance-fund bankruptcy resolution. Full
-> Anchor program (\~XX KLOC Rust), TS SDK, React UI, and keeper bot. Public devnet
-> deployment + 4 technical blog posts. Math modules unit-tested with vectors
-> lifted from Drift Protocol v2 to prove numerical equivalence. Threat-modeled,
-> fuzz-hardened, and audit-replicated. 30+ days live keeper operations on
-> Drift devnet. Accepted PR to `drift-labs/keeper-bots-v2` / disclosed bounty.*
-
-**The 5 stories you'll tell:**
-
-1. **"I rebuilt Drift's funding rate math from first principles."** (R14 blog.)
-   Shows you reason from the cap-at-fee-pool constraint, not from a tutorial.
-2. **"I can walk a liquidation from underwater oracle tick → liquidator bot →
-   insurance-fund settlement in one breath."** (M4 demo.)
-   Shows system-level thinking — the interview superpower.
-3. **"Here's where I diverged from Drift and why."** (`docs/design-journal.md`.)
-   Shows judgment. Choosing *not* to implement prediction markets or isolated
-   mode is more impressive than implementing them poorly.
-4. **"I threat-modeled my own code, fuzzed the margin + liquidation engines for
-   48 hours each, and replicated three findings from a real Drift auditor
-   report."** (R27–R29 · blog #4.) Shows security mindset — the senior → staff
-   differentiator most candidates never demonstrate.
-5. **"My PR is merged in `drift-labs/keeper-bots-v2` — here's the URL."** (R31.)
-   Strongest hire signal in the portfolio. Not a cover-letter claim — a
-   clickable artifact the hiring manager can verify in one click.
-
-**Interview prep artifacts** (produced naturally by shipping rings):
-- Per-ring journal entries in `docs/rings/` → instant study guide for Drift
-  codebase deep-dives.
-- Numeric test vectors → live-coding warmups.
-- `design-journal.md` → tradeoff talking points.
-
----
-
-## 9 · Weekly Cadence (operational)
+## 8 · Weekly Cadence (operational)
 
 - **Mon–Fri mornings:** learning ring (read Drift, extract concept, update `learning_state.md`).
-- **Mon–Fri afternoons:** build ring (ship code, tests, docs).
-- **Fri EOD:** commit + push, run `cargo clippy`, update `docs/rings/RNN-*.md`, update progress in this file's milestone checkboxes.
-- **Sat:** blog draft if within 1 ring of a milestone; otherwise refactor / polish.
-- **Sun:** off, or deeper reading (Paradigm blog, SBF Medium, Perp v2 whitepaper, dYdX v4 docs for contrast).
+- **Mon–Fri afternoons:** build ring (ship code + tests).
+- **Fri EOD:** commit + push, run `cargo clippy`, tick the ring's checkbox in §10.
+- **Sat / Sun:** off, or refactor / deeper reading (Perp v2 whitepaper, dYdX v4 docs for contrast).
 
 ---
 
-## 10 · References
+## 9 · References
 
 **Primary source (always cite):**
 - `../protocol-v2-master/programs/drift/src/` — Drift v2 on-chain program.
@@ -768,11 +698,11 @@ afternoon**.
 - https://drift-labs.github.io/v2-teacher/ — official teacher docs.
 - https://github.com/drift-labs/keeper-bots-v2 — reference keeper-bot implementations.
 
-**Secondary (for the blogs):**
+**Secondary (background reading):**
 - Perp v2 whitepaper (Uniswap-v3-style AMM perps).
 - dYdX v4 docs (contrast: off-chain orderbook).
 - Paradigm "Everlasting Options" paper (funding rate origin).
-- Vertex, GMX, Hyperliquid architecture posts (for contrast paragraph in each blog).
+- Vertex, GMX, Hyperliquid architecture posts.
 
 **Tooling:**
 - Anchor 0.31.x
@@ -783,23 +713,23 @@ afternoon**.
 
 ---
 
-## 11 · Progress Tracker (update at every ring close)
+## 10 · Progress Tracker (update at every ring close)
 
 ### Milestone checklist
 - [ ] **M1** · R5–R8 · Can trade
-- [ ] **M2** · R9–R14 · Real pricing *(blog #1 published)*
-- [ ] **M3** · R15–R18 · Full risk *(blog #2 published)*
-- [ ] **M4** · R19–R21 · Can liquidate *(blog #3 published)*
-- [ ] **M5** · R22–R26 · Ship *(Vercel live, v1.0.0 tagged, 3 Looms recorded)*
-- [ ] **M6** · R27–R31 · Hardened + contributed *(blog #4 published, merged PR or disclosed bounty)*
+- [ ] **M2** · R9–R14 · Real pricing
+- [ ] **M3** · R15–R18 · Full risk
+- [ ] **M4** · R19–R21 · Can liquidate
+- [ ] **M5** · R22–R26 · Ship to devnet
+- [ ] **M6** · R27–R31 · Hardened + contributed
 
 ### Per-ring build status
-- [ ] R1 · Repo + vision doc *(catch-up)*
-- [ ] R2 · Leverage journal + spreadsheet *(catch-up)*
-- [ ] R3 · vAMM trade-trace spreadsheet *(catch-up)*
-- [ ] R4 · `anchor init` + math primitives + error enum *(catch-up)*
-- [ ] R5 · `PerpPosition` + `initialize_user` *(catch-up)*
-- [ ] R6 · `Order` struct + `place_perp_order` *(in lockstep with learning R6)*
+- [ ] R1 · *(learning only, no build)*
+- [ ] R2 · *(learning only, no build)*
+- [ ] R3 · *(learning only, no build)*
+- [ ] R4 · `anchor init` + math primitives + error enum *(structs typed; tests still owed)*
+- [ ] R5 · `PerpPosition` + `User` account + `initialize_user` *(struct typed; account + ix + test still owed)*
+- [ ] R6 · `Order` struct + `place_perp_order` *(structs typed; ix + tests still owed; in lockstep with learning R6)*
 - [ ] R7 · Dutch auction + stub fill + filler reward
 - [ ] R8 · `update_position_and_market` — **🏁 M1**
 - [ ] R9 · Full vAMM + swap_base_asset
@@ -820,12 +750,12 @@ afternoon**.
 - [ ] R24 · LP *(optional)*
 - [ ] R25 · Market lifecycle
 - [ ] R26 · Guard rails + events + CI + deployment — **🏁 M5**
-- [ ] R27 · Threat model doc *(parallel · sequential after R21)*
+- [ ] R27 · Security regression tests *(parallel · sequential after R21)*
 - [ ] R28 · Fuzz harnesses + regression vectors
-- [ ] R29 · Audit react-blog + 3 patched findings — **🏁 M6-A**
+- [ ] R29 · 3 patched audit findings + regression tests — **🏁 M6-A**
 - [ ] R30 · Live keeper 30d + public dashboard *(parallel · background clock starts at R20)*
 - [ ] R31 · Merged PR or disclosed bounty — **🏁 M6-B**
 
 ---
 
-*Last updated: 2026-04-23 · Owner: veerbal1 · Companion docs: `../learning/master_map.md`, `../learning/learning_state.md`*
+*Last updated: 2026-04-28 · Owner: veerbal1 · Companion docs: `../learning/master_map.md`, `../learning/learning_state.md`*

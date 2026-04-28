@@ -1,192 +1,188 @@
 # LEARNING STATE
 
 ## Current Position
-- **Ring: 7 of 31** (learning spiral = 26; build-only rings 27–31 for adversarial + real-world phases)
-- **Active Concept:** 32–37 (Dutch auctions, keepers, fill flow, fees-on-fill)
-- **Status:** R6 closed 2026-04-26. Concept side: Order vs OrderParams trust split (program-only fields: slot/order_id/status/existing_position_direction), OrderType (Market/Limit + 3 deferred), OrderStatus lifecycle (Init→Open→Filled/Canceled), reduce_only as cap-not-flip safety, post_only (must be maker), IOC (fill now or cancel). Build side: 3 enums + Order (12 fields) in state/user.rs + OrderParams (9 fields) in state/order_params.rs, all precision-annotated, build clean. DEFERRED to R7: User account struct (#[account] with orders[16] + perp_positions[8]), place_perp_order instruction handler, auction fields (auction_duration/start/end). R6 was data model only; R7 brings dynamics + accounts + first instruction handler.
-- **Mode (new, per updated CLAUDE.md):** learning + building in lockstep. Every ring ships BOTH a concept understanding AND a code artifact from `drift-build/README.md`. User writes every line of code; tutor guides with "now write X" prompts.
+- Ring: 6 of 26
+- Active Concept: 25-31 (Order struct, order types, lifecycle, reduce-only, post-only, IOC)
+- Status: IN PROGRESS — Chunks 1/6 and 2/6 (full sub-chunked OrderType walkthrough 2a→2g) COMPLETE as of 2026-04-28. User has all 5 OrderType rules locked + the "5 rules → 3 machines" synthesis. Awaiting "next" for Chunk 3/6 (Order struct anatomy + OrderParams: what user submits vs what gets stored).
 
----
+## Ring 6 Chunk Plan
+- [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
+- [ ] 2/6 — The 5 OrderType flavors (IN PROGRESS, sub-chunked):
+  - [x] 2a — Motivation: an order needs a "rule label" called OrderType; coffee-shop analogy; five rules total (delivered 2026-04-28)
+  - [x] 2b — Market rule: fill now, no price commitment, no wait condition; Dutch auction is forward-ref Ring 7 (delivered 2026-04-28)
+  - [x] 2c — Limit rule: "or better" clause (ceiling for buys / floor for sells), two cases (CROSS or REST), trade-off table, maker/taker teaser for Ring 23 (delivered 2026-04-28)
+  - [x] 2d — TriggerMarket: armed/triggered two-state pattern, Above/Below condition, stop-loss + take-profit examples, brief note on TriggeredAbove/TriggeredBelow as "already fired" memory state (full lifecycle treatment deferred to Chunk 4/6) (delivered 2026-04-28)
+  - [x] 2e — TriggerLimit: same arming as 2d, TWO prices (trigger + limit), flash-crash failure mode (limit floor protects price BUT can strand the position), TriggerMarket vs TriggerLimit comparison table (delivered 2026-04-28)
+  - [x] 2f — Oracle rule: brief aside on "oracle = live external truth price" (callback to user's own Ring 1 'rain is independent' analogy + Ring 3 peg); Oracle order = Market with auction prices as OFFSETS not absolutes; volatility/stale-price motivation; bot/market-maker use case; full oracle mechanics deferred to Ring 10 (delivered 2026-04-28)
+  - [x] 2g — Synthesis: 5-row comparison table, two-family tree (ACTIVE NOW vs ARMED & WAITING; auction vs price-pinned), use-case cheat sheet, mental model "5 rules → 3 underlying machines (auction / resting-limit / armed-watcher wrapper)" (delivered 2026-04-28). 2/6 COMPLETE.
+- [ ] 3/6 — Order struct anatomy + OrderParams (IN PROGRESS, sub-chunked):
+  - [x] 3a — Motivation: WHY two structs? OrderParams = request form; Order = stored record. Bank-deposit-slip analogy. Source files: `state/order_params.rs` + `state/user.rs`. Stored Orders live in User account fixed-size array (callback to Ring 4 four-pillars) (delivered 2026-04-28)
+  - [x] 3b — OrderParams walkthrough: 17 fields organized into 5 clusters (Identity-7, Toggles-3, Trigger-2, Auction-3, Oracle+lifetime-2). Concrete OrderParams literal for "Limit Long 2 SOL @ $185 on SOL-PERP" with PRICE_PRECISION/BASE_PRECISION values. Toggle deep-dive deferred to Chunk 5/6, lifecycle (max_ts) deferred to Chunk 4/6 (delivered 2026-04-28)
+  - [ ] 3c — Order walkthrough: what's IN the stored record. Highlight protocol-stamped fields (slot, order_id, status, base_asset_amount_filled, quote_asset_amount_filled, existing_position_direction, posted_slot_tail) NOT present in OrderParams
+  - [ ] 3d — Side-by-side delta: what's added/normalized between submission and storage (Option<T> → defaults, post_only enum → bool, IOC bit_flag → bool)
+  - [ ] 3e — Worked example: user submits OrderParams { Limit, Long, 2 SOL, price $185, market_index SOL-PERP } → protocol stores Order { same fields + order_id, slot, status=Open, fills=0, existing_position_direction }
+- [ ] 4/6 — Lifecycle: OrderStatus (Init → Open → Filled / Canceled); note there is NO Expired terminal state — max_ts triggers cancellation
+- [ ] 5/6 — The three toggles: reduce_only (bool), post_only (FOUR variants — plot twist; None/MustPostOnly/TryPostOnly/Slide), IOC (lives inside bit_flags — not a bool; OrderParamsBitFlag::ImmediateOrCancel = 0b00000001)
+- [ ] 6/6 — Single ring-close scenario check (not a drill)
 
-## Build Track (pointer only — full plan lives in `drift-build/README.md`)
-
-- **Repo:** `~/Documents/learning/perpetual/mini-drift/` (to be `git init`'d as part of R1 build deliverable).
-- **Stakes:** single portfolio project targeting Drift / Jupiter / top-tier perp DEX engineering hire. User is full-time on this.
-- **Four tracks:**
-  - (A) `mini-drift` Anchor program — activates R5, ships through R26
-  - (B) `drift-keeper` TS bot against **real Drift devnet** — activates R10
-  - (C) `mini-drift-web` React UI — activates R8
-  - (D) Content: per-ring `docs/rings/RNN-*.md`, 4 milestone blogs, 3 Looms, **daily Twitter build-in-public**
-- **Milestones:** M1 R5–R8 (can trade) · M2 R9–R14 (real pricing) · M3 R15–R18 (full risk) · M4 R19–R21 (can liquidate) · M5 R22–R26 (ship) · M6 R27–R31 (hardened + contributed).
-- **Quality bar per ring:** compiles clean · `cargo clippy -- -D warnings` · tests pass · custom error enum · atomic commits. Hard-math rings MUST have test vectors matching Drift's actual outputs (🎯 markers in the build README).
-- **Current build ring:** **R1** (fresh start; lockstep with learning R1). Next build deliverable: `git init` the repo, root `README.md` skeleton, `docs/rings/R01-what-is-a-perp.md` in user's own words.
-
----
-
-## ACTIVE STYLE DIRECTIVE (preserved across reset — supersedes all prior style notes)
-
-- **Set 2026-04-20 mid-Ring-5.** User reported HEADACHES from constant atomic-Socratic questioning. This directive replaced the atomic-Socratic default from Rings 2–4.
-- **DEFAULT delivery:** each ring = a FULL PICTURE upfront — framed, with concrete examples, tables, and source-file pointers. Cover the whole ring's concept space in one teaching block.
-- **Check question:** at most ONE short check question at the END of the ring, only when needed to confirm a non-obvious piece landed before progression.
-- **No atomic drilling:** do NOT fire rapid one-variable questions mid-ring unless the user explicitly asks to be drilled.
-- **Chunking rule (HARDENED 2026-04-23):** EVERY response must be a small bite, easy to chew and digest. User reported long multi-section responses (headers, tables, multiple numbered deliverables in one turn) are too much. Default delivery is now ONE small chunk per turn — a few sentences, one concept or one step. No dumping a full ring in one message even if it "fits the full picture" directive; break the full picture into sequential bites. End each chunk with a natural pause (question, "next?", or "ready?"). No headers stacks, no multi-section walls, no 3+ deliverables listed in one message. When in doubt → smaller.
-- **Build phases (NEW — added 2026-04-23 with build lockstep):** use the **"Now write X"** prompt format. State the goal, name the file, name the connection to prior rings (concept-side AND code-side), then wait while user writes. Review their diff. NEVER write their code. If stuck, climb the hint ladder from CLAUDE.md EDGE CASES (reframe → prior ring → plain English → pseudocode as last resort).
-- **Forbidden per CLAUDE.md:** writing any code (Rust / TS / config / tests / docs), creating files beyond the three managed files (`master_map.md`, `learning_state.md`, `drift-build/README.md`), auto-solving user's code.
-
----
+## ACTIVE STYLE DIRECTIVE (supersedes all prior style notes)
+- Set 2026-04-20 mid-Ring-5. User reported HEADACHES from constant atomic-Socratic questioning ("answering a lot of questions after each interaction").
+- NEW DEFAULT: deliver each ring as a FULL PICTURE upfront — framed, with concrete examples, tables, and a source-file pointer. Cover the whole ring's concept space in one teaching block.
+- Ask at most ONE short check question at the END of the ring, only when needed to confirm a non-obvious piece landed before progressing.
+- DO NOT fire atomic questions mid-ring unless the user explicitly asks to be drilled. Earlier "atomic Socratic default" (Rings 2-4) is SUPERSEDED.
+- CHUNKING RULE (added 2026-04-20, mid-Ring-5 review): for LONG walkthroughs (e.g. full-diagram reviews, multi-concept syntheses), split into numbered chunks (e.g. "1 / 8") and deliver ONE chunk per turn. End each chunk with "say 'next' when ready" — user paces. Do NOT dump 2000+ word explainers in one message even when style is "full picture." Full picture per ring is fine; full picture per SINGLE concept is better for reviews.
+- FINER CHUNKING (added 2026-04-28 mid-Ring-6): user explicitly said "this ring should be compiled by every bit in my brain. Use easy to understand vocabulary." After Chunk 2/6 delivered all 5 order types in one big table, user pushed back asking for ONE concept per turn. Going forward: each top-level chunk in the ring plan is broken into atomic SUB-CHUNKS (e.g. 2a, 2b, 2c). One sub-chunk = ONE small idea (~150-250 words), plain English first, source-code naming AFTER the idea lands. End with "say 'next' when ready". A long table or comparison is the LAST sub-chunk after all rows are taught individually. This applies for the rest of Ring 6 and likely future rings too — keep watching the user's signal.
+- VOCAB GUARD (reinforced 2026-04-28): in early sub-chunks of any concept, prefer plain English ("the rule label", "wait in line") over the code term. Introduce the actual struct field / enum name only AFTER the concept clicks. Source-file pointers come at the END of the ring or sub-section, not at the top.
+- Still forbidden per CLAUDE.md: writing full implementation code, auto-solving user code, creating files beyond master_map.md / learning_state.md. Pseudocode + tiny syntax snippets still allowed.
 
 ## Progress Overview
 
-### PHASE 1 — THE WORLD
-- [x] **Ring 1**: Trading, futures, perpetual, exchange — closed 2026-04-23 (re-anchor; doc deliverables dropped per user directive)
-- [x] **Ring 2**: Long, short, PnL, collateral, margin, leverage — closed 2026-04-23 (chunked delivery, user self-paced with "move")
+### PHASE 1 - THE WORLD
+- [x] Ring 1: Trading, futures, perpetual, exchange -- COMPLETED
+- [x] Ring 2: Long, short, PnL, collateral, margin, leverage -- COMPLETED
 
-### PHASE 2 — THE ENGINE
-- [x] **Ring 3**: AMM, constant product, price from reserves, peg — closed 2026-04-24 (chunked bites, incl. repeg cost + code walk)
-- [x] **Ring 4**: Solana accounts, four pillars, precision, safe math — closed 2026-04-25 🚀 first Rust shipped (constants, error, safe_math)
+### PHASE 2 - THE ENGINE
+- [x] Ring 3: AMM, constant product, price from reserves, peg -- COMPLETED
+- [x] Ring 4: Solana accounts, four pillars, precision, safe math -- COMPLETED
 
-### PHASE 3 — THE TRADE
-- [x] **Ring 5**: PerpPosition struct, base/quote, direction — closed 2026-04-25 (struct shipped, build clean)
-- [x] **Ring 6**: Order struct, types, lifecycle, reduce-only, post-only — closed 2026-04-26 (3 enums + Order + OrderParams shipped, build clean)
-- [ ] **Ring 7**: Dutch auctions, keepers, fill flow, fees-on-fill — **UP NEXT**
-- [ ] Ring 8: Position updates: open/increase/decrease/close — 🏁 **M1**
+### PHASE 3 - THE TRADE
+- [x] Ring 5: PerpPosition struct, base/quote, direction -- COMPLETED 2026-04-20
+- [ ] Ring 6: Order struct, types, lifecycle, reduce-only, post-only -- UP NEXT
+- [ ] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill
+- [ ] Ring 8: Position updates: open/increase/decrease/close
 
-### PHASE 4 — THE PRICING ENGINE
+### PHASE 4 - THE PRICING ENGINE
 - [ ] Ring 9: AMM internals: reserves, sqrt_k, exposure, OI, bounds
 - [ ] Ring 10: Oracles, price feeds, TWAP, strict pricing
 - [ ] Ring 11: Spreads: what they are, bid/ask, asymmetry
 - [ ] Ring 12: Living spreads: inventory, volatility, revenue retreat
 
-### PHASE 5 — ONGOING COSTS
-- [ ] Ring 13: Fee flow, accumulation, pools
-- [ ] Ring 14: Funding rate, mark vs oracle, asymmetry, capping — 🏁 **M2**
+### PHASE 5 - ONGOING COSTS
+- [ ] Ring 13: Fee flow, accumulation, pools, total_fee_minus_distributions
+- [ ] Ring 14: Funding rate, mark vs oracle, asymmetry, capping
 
-### PHASE 6 — RISK
-- [ ] Ring 15: Spot as collateral: SpotPosition, scaled_balance
-- [ ] Ring 16: PnL calculation
-- [ ] Ring 17: Per-position margin: IMF, size premium
-- [ ] Ring 18: Portfolio margin: aggregation, total collateral — 🏁 **M3**
-- [ ] Ring 19: PnL settlement
-- [ ] Ring 20: Liquidation
-- [ ] Ring 21: Bankruptcy, social loss, insurance fund — 🏁 **M4**
+### PHASE 6 - RISK
+- [ ] Ring 15: Spot as collateral: SpotPosition, scaled_balance, get_token_value
+- [ ] Ring 16: PnL calculation: exit - entry, AMM and oracle valuation
+- [ ] Ring 17: Per-position margin: types, ratios, IMF, size premium
+- [ ] Ring 18: Portfolio margin: PnL weights, aggregation, total collateral
+- [ ] Ring 19: PnL settlement: pool, +/-, imbalance, margin check
+- [ ] Ring 20: Liquidation: triggers, partial, fees, statuses
+- [ ] Ring 21: Bankruptcy, social loss, insurance fund, contract tiers
 
-### PHASE 7 — AMM HEALTH
+### PHASE 7 - AMM HEALTH
 - [ ] Ring 22: Repeg, K updates, AMM JIT
-- [ ] Ring 23: Matching engine, fulfillment methods
+- [ ] Ring 23: Matching engine, fulfillment methods, crossing
 
-### PHASE 8 — ADVANCED
-- [ ] Ring 24: LP system (optional)
-- [ ] Ring 25: Market lifecycle: statuses, pauses, expiry
-- [ ] Ring 26: Guard rails, events, CI, deployment — 🏁 **M5**
+### PHASE 8 - ADVANCED
+- [ ] Ring 24: LP system: shares, sqrt_k, settlement, rebase
+- [ ] Ring 25: Market lifecycle: statuses, pauses, expiry, delisting
+- [ ] Ring 26: Special modes & infrastructure: high leverage, isolated, prediction, guard rails, events, full spot deep dive, DEX
 
-### PHASE 9 — ADVERSARIAL (build-only; extends learning spiral)
-- [ ] Ring 27: Threat model (15+ attack scenarios)
-- [ ] Ring 28: Fuzzing (cargo-fuzz harnesses)
-- [ ] Ring 29: Audit react-blog + 3 patched findings — 🏁 **M6-A**
+## Mastery Notes
 
-### PHASE 10 — REAL-WORLD SIGNAL (build-only; extends learning spiral)
-- [ ] Ring 30: Live keeper 30-day uptime + dashboard (background clock starts at R20)
-- [ ] Ring 31: Merged PR to `drift-labs/keeper-bots-v2` OR disclosed bounty — 🏁 **M6-B**
+### Ring 1
+- User knows long/short conceptually at a basic/UI level but does NOT actively trade perps. Do not assume trader intuition for PnL math, funding, liquidations, etc. Verify from scratch.
+- Initial sticking point: "how can someone sell a promise for something they don't have?" -- landed once reframed as "a recorded bet in a database whose value tracks an external price." The word "promise" confused them; "bet" / "agreement" stuck.
+- BREAKTHROUGH at Ring 1 close: user independently derived the counterparty matching problem -- "if I'm long $50, someone must be short $50; how does the protocol find exact opposite amounts among thousands of traders?" This IS the motivating question for the entire AMM (Rings 3, 9-12) and matching engine (Ring 23). They think at the system-design level, not just mechanics -- lean into this.
+- Analogy that worked: "rain is independent, it happens on its own" -- user used this to explain that the underlying asset's price is separate from the bet. Reuse this framing when we introduce oracles (Ring 10).
+- User prefers the word "bet" over "promise" -- stick with "bet" / "agreement" going forward.
 
----
+### Ring 2
+- Entered Ring 2 with the stock-market short-selling mental model ("Bob borrowed BTC, sold at $50k, rebought at $45k, kept the difference"). Classic perp-learner trap. Corrected by asking them to spot the contradiction with Ring 1 ("if longs don't touch real BTC, why would shorts?"). Landed cleanly.
+- Ideas 5 (long/short) and 6 (PnL) now locked in. User understands: direction is just a sign, PnL flows between long and short as price moves, no asset is ever physically exchanged.
+- Moving to idea 7 (collateral). Per the plan, this is where Ring 2 slows down -- collateral/margin/leverage are the genuinely new material for this user.
+- Ring 2 closed out cleanly. User tends to give TERSE but CORRECT answers ("10,000", "trader a still alive"). Don't mistake brevity for shallow understanding -- they track the math, they just don't always spell it out. When they're terse, fill in the math on paper for the record, then keep moving.
+- User asked to skip the collateral/margin check question ("i understand, let's move") but passed the follow-up leverage-math verification cleanly. They're pacing themselves; trust it but still verify at ring boundaries.
+- STYLE PREFERENCE (explicit, mid-Ring-3): user wants pure atomic Socratic -- one variable per question, no multi-part questions, no explanation dumps, no recapping lists of ideas. Ask, wait, push one layer deeper. Don't spoon-feed answers. If they use jargon, make them define it first. Keep the ring framework (required by CLAUDE.md) but tighten style sharply within it.
 
-## Mastery Notes (preserved across reset — tutor calibration from prior run)
+### Ring 3
+- User independently derived FOUR major concepts: (1) x*y=k with y/x = price, correctly mapping y=USDC, x=BTC; (2) virtual reserves insight -- "AMM does not actually have any BTC reserve, just collateral" -- caught this on their own, usually a taught concept not a derived one; (3) arbitrage as a gap-closer -- "won't traders long to capture the 50k vs 55k gap?"; (4) peg-induced instant PnL redistribution -- "if peg moves, longs win instantly and shorts lose instantly."
+- Teaching pattern that worked: stress-test the user's "simple oracle-only AMM" hypothesis with a concrete pile-in scenario ($100 long x 1M traders x 20% move = $20M owed). Made them FEEL why a curve is needed. They derived the mechanism from the pain.
+- CONFUSION MODE: user shuts down with "no idea what you are telling" when a scenario has too many variables at once (1M traders + $5M + oracle ticks in one question). Fix: one variable at a time. One trader, one move. Scale up in separate turns.
+- Self-aware: user explicitly flagged "partially understand, not solid" and later "what if there are hidden parts I don't know" -- honor this, do audits at ring close. They prefer honesty over false completion.
+- Mini-callbacks landed well: when user asked "is this x*y?" mid-derivation, parking the formula for one more atomic step ("price moves which direction?") forced them to verbalize the mechanism BEFORE seeing the formula name. Do this again.
+- Vocabulary introduced at Ring 3 close: `mark_price` (the AMM's quoted price = (y/x) * peg_multiplier), `slippage` (teaser -- own trade moves price; full math Ring 9).
+- Forward refs planted for Rings 9 (price impact), 10 (oracles), 11 (bid/ask spread), 14 (funding rate), 22 (repeg cost/triggers), 24 (where virtual reserves come from / LPs). Don't let these become vapor -- resurface each when its ring opens.
 
-These describe HOW this user learns best. They are not progress. Keep them referenced at session start and apply when teaching.
+### Ring 5 (delivered & closed 2026-04-20)
+- Delivered as full-picture lecture per new style directive (see ACTIVE STYLE DIRECTIVE at top). Single end-of-ring check: "short 5 SOL at $200 → what are base and quote?" User answered instantly: "-5, +1000". Clean close, no wobble.
+- New style (full picture + single check) REPLACES the atomic-Socratic default going forward. User explicitly reported headaches from prior constant questioning — respect the shift.
+- The full-picture delivery included: (a) PnL math showing only entry/size/direction matter, (b) signed encoding trick (base carries size AND direction), (c) quote = cash side with OPPOSITE sign, IN/OUT convention, (d) quote stores NOTIONAL not collateral (collateral lives in SpotPosition, Ring 15), (e) quote_entry_amount vs quote_break_even_amount (equal at open, diverge with fees — forward ref Ring 7), (f) PositionDirection enum exists for Order flow (Ring 6) but NOT on PerpPosition.
+- Source file revealed: `programs/drift/src/state/user.rs` (PerpPosition struct).
+- User's comfort zone with this style: confirmed. Continue pattern for Ring 6+.
 
-### Prior Ring 1
-- User knows long/short at a basic/UI level but does NOT actively trade perps. Don't assume trader intuition for PnL math, funding, liquidations. Verify from scratch.
-- Sticking point resolved by reframing "promise" as **"bet" / "agreement in a database whose value tracks an external price."** User prefers "bet" and "agreement" over "promise" — use that vocabulary.
-- BREAKTHROUGH at Ring 1 close: user independently derived the counterparty matching problem ("if I'm long $50, someone must be short $50 — how does the protocol match exact opposites among thousands?"). This is the motivating question for the entire AMM + matching engine. **They think at system-design level, not just mechanics — lean into this.**
-- Analogy that worked: "rain is independent, it happens on its own" — reuse when introducing oracles (Ring 10).
+### Ring 5 (prior mid-flight attempt — SUPERSEDED by 2026-04-20 fresh delivery; kept below as behavioral/style pattern data only)
+- Opening move: "minimum info to compute PnL a week later" -- user initially listed collateral + leverage + entry + direction. Used the PnL arithmetic check ($200 on long 10 SOL, $100->$120) to make them SEE that collateral/leverage didn't appear in the formula. They self-identified entry + direction as the ones they actually used. Worked cleanly.
+- Size was the hidden one -- they implicitly used "× 10" but didn't list "size" originally. Caught it when asked where the 10 came from. Small gap, fast fix.
+- Signed encoding (+10 long, -10 short): derived instantly and unprompted. "+means long, - means short" -- no resistance.
+- Quote-as-notional-not-collateral: user asked the right question ("is quote direct collateral or leverage included amount?") -- that's a real design-level instinct. Framed the $100 vs $1000 scenario; they picked $1000 correctly.
+- Sign of quote: FIRST INSTINCT WRONG -- guessed long=+quote, short=-quote. Before pushing further, user flagged CONFUSION explicitly: "im not seeing full picture... we studying in chunks and a lot of questions. Do you think about this?" -- good self-advocacy. Honor it.
+- RESPONSE: zoomed out and delivered the full two-field layout as a table (base_asset_amount + quote_asset_amount, signed, opposite signs, IN=+ OUT=-). Did NOT force the derivation when they were confused. This user tolerates atomic style well on solid ground (Rings 3-4) but asks for the map when genuinely lost. Track this -- pattern is "atomic until stuck, then give the frame."
+- STYLE CALIBRATION: atomic Socratic works, but not as a religion. When user says "I'm confused / missing context," deliver the frame immediately, then return to atomic. Mid-ring reframes are fine -- they are NOT admissions of failure, they are part of the method for this user.
+- Still pending in Ring 5: (a) confirm the sign-flip intuition is now locked (ask a short verification), (b) introduce quote_entry_amount vs quote_break_even_amount (they differ because of fees; forward ref Ring 7), (c) note that PositionDirection enum exists for ORDER flow but is NOT stored on PerpPosition (the signed base IS the direction storage).
 
-### Prior Ring 2
-- Entered with stock-market short-selling mental model (borrow-and-sell). Classic perp-learner trap. Corrected by asking them to spot the contradiction with Ring 1.
-- User is **TERSE BUT CORRECT** ("10,000", "trader a still alive"). Don't mistake brevity for shallow understanding — track the math, fill it in on paper for the record, keep moving.
-- Paced themselves with "I understand, let's move"; passed verification anyway. Trust self-pacing but still verify at ring boundaries.
+### Ring 4
+- User entered with working Solana baseline: already knew PDAs, program ownership, lamports-as-SOL-atomic-unit. Did NOT need to teach these -- confirmed and leveraged directly.
+- Derived fixed-point representation unprompted: "multiply by a large scaler, store as big int, divide back on use." One atomic push was enough.
+- Also derived the tradeoff unprompted: "bigger scaler = more precision, more bytes" -- correct. Add overflow risk as my own overlay.
+- Nailed the scaler-matches-native-unit insight: "SOL = 10^9 lamports, can't split further, so BASE_PRECISION = 10^9." This is the real reason BASE ≠ QUOTE precision; they got it on first ask.
+- Caught the numerical guardrail: when I gave price × size ~ 10^15, they noted "this will not overflow" before I baited them into it. Track this -- they check magnitudes, don't just trust handed numbers.
+- Knew `checked_*` functions by name. Also independently proposed "don't calc everything in one line, break into 2-at-a-time intermediates" -- that's a real Drift pattern. Confirmed their instinct.
+- Minor calibration: they said `checked_mul` "throws error." Actual return is Option<T>; error conversion via `ok_or(ErrorCode)?`. Noted but did not belabor.
+- Pacing: Ring 4 moved fast (6-7 atomic beats total). Continue this tempo when user has existing adjacent knowledge; slow back down on genuinely new material (Ring 5 entry-vs-break-even, Ring 7 auctions, etc.).
+- Four pillars delivered as a table at the end -- user grouped fine. No confusion about State vs PerpMarket vs SpotMarket vs User. They correctly placed AMM reserves in PerpMarket on first ask.
 
-### Prior Ring 3
-- User independently derived FOUR major concepts: (1) x\*y=k with y/x = price (correctly mapping y=USDC, x=BTC); (2) virtual reserves ("AMM does not actually have any BTC reserve, just collateral" — derived, not taught); (3) arbitrage as gap-closer; (4) peg-induced instant PnL redistribution.
-- **Teaching pattern that works:** stress-test their hypothesis with a concrete scale-up scenario ("$100 long × 1M traders × 20% move = $20M owed"). They derive from feeling the pain.
-- **CONFUSION MODE:** user shuts down with "no idea what you are telling" when a scenario has too many variables at once. Fix: one variable at a time, one trader, one move. Scale up in separate turns.
-- Self-aware — flags "partially understand, not solid" and "what if there are hidden parts I don't know." Honor this. Audit at ring close.
-
-### Prior Ring 4
-- **User has Solana baseline:** PDAs, program ownership, lamports-as-atomic-unit of SOL. Do NOT re-teach these.
-- Derived fixed-point representation unprompted: "multiply by scaler, store as big int, divide on use." Derived the tradeoff unprompted: "bigger scaler = more precision, more bytes."
-- Knew `checked_*` functions by name. Independently proposed "break into 2-at-a-time intermediates" — matches Drift pattern.
-- Pacing: Ring 4 moved fast (6–7 atomic beats total). Continue fast tempo when user has adjacent knowledge; slow down on genuinely new material.
-
-### Prior Ring 5
-- Delivered as full-picture lecture (2026-04-20). Single end-of-ring check: "short 5 SOL at $200 → base and quote?" User answered "-5, +1000" instantly. Clean close.
-- This is where the current style directive was cemented. User explicitly confirmed the full-picture-per-ring + single-check format works.
-
----
-
-## Vocabulary Unlocked (preserved — user already knows these terms)
-
-These are banked from the prior run. Don't re-teach at "Ring 1 beginner" level. Ring 1 this time around is a re-anchor + first build deliverable, not a true beginner introduction.
-
+## Vocabulary Unlocked
 - trading, buying, selling
 - future (a bet on what a price WILL be)
 - perpetual (a bet that never expires)
 - exchange / marketplace / middleman (the program that holds money, tracks bets, forces payouts)
-- bet / agreement (the preferred framing for a position)
+- bet / agreement (the record that tracks a position's value)
 - long (bet that price goes up)
 - short (bet that price goes down)
-- PnL / profit and loss
-- collateral (locked deposit guaranteeing payout on loss; USDC on Drift)
-- margin / margin requirement (required collateral-to-size ratio)
-- leverage (bet size / collateral ratio)
-- liquidation (teaser only — Ring 20)
-- AMM (automated market maker — always-available robot counterparty)
-- reserves / virtual reserves (x = base, y = quote; purely accounting numbers on a perp AMM)
-- constant product / x\*y=k
-- liquidity
-- peg / peg_multiplier (mark_price = (y/x) × peg_multiplier)
-- mark price
-- slippage (teaser only — Ring 9)
-- arbitrage (user-derived)
-- funding rate (teaser only — Ring 14)
-- repeg / repeg cost (teaser only — Ring 22)
-- account (Solana storage unit)
-- PDA (program-derived address)
-- four pillars (State singleton, PerpMarket, SpotMarket, User)
-- State, PerpMarket, SpotMarket, User
-- fixed-point / scaler
-- PRICE_PRECISION = 10^6
-- BASE_PRECISION = 10^9
-- QUOTE_PRECISION = 10^6
-- overflow / silent wrapping
-- checked_mul / checked_add / checked_sub / checked_div
-- `ok_or(ErrorCode)?`
-- u64
-- position / PerpPosition
-- base_asset_amount (signed i64; sign = direction, magnitude = size)
-- quote_asset_amount (signed i64; always OPPOSITE sign to base; stores NOTIONAL not collateral)
-- signed encoding (direction + size collapsed into one signed integer)
-- IN/OUT sign convention (received = +, gave up = −)
-- notional (size × entry price)
-- quote_entry_amount (snapshot at open, before fees)
-- quote_break_even_amount (level needed to net-zero including fees)
-- entry price, break-even price (derivable)
-- PositionDirection enum (Long/Short; used on Order, NOT on PerpPosition)
-
----
+- PnL / profit and loss (money flowing between sides as price moves; drains from loser's collateral, adds to winner's)
+- collateral (locked deposit guaranteeing you can pay if you lose; USDC on Drift)
+- margin / margin requirement (required collateral-to-size ratio, enforced before a bet can open; stored as margin_ratio_initial per market)
+- leverage (bet size / collateral ratio; inverse of margin; e.g. 5% margin = up to 20x leverage)
+- liquidation (teaser only: forcible bet closure before collateral hits zero; full topic in Ring 20)
+- AMM (automated market maker -- always-available robot counterparty)
+- reserves / virtual reserves (x = base, y = quote; purely accounting numbers on a perp AMM, no actual BTC anywhere)
+- constant product / x*y=k (the curve: as one reserve drops, the other must rise to keep product constant; price never runs out, just gets arbitrarily expensive)
+- liquidity (implicitly: the size of the reserves; thicker reserves = less price impact per trade)
+- peg / peg_multiplier (scalar knob in the price formula: mark_price = (y/x) * peg_multiplier; aligns AMM baseline to real-world oracle price)
+- mark price (the AMM's quoted price from its formula)
+- slippage (teaser only: own trade moves the price against you; full math Ring 9)
+- arbitrage (user-derived: traders capture the AMM-oracle gap, which also closes the gap)
+- funding rate (teaser only: indirect ongoing gap-closer; full topic Ring 14)
+- repeg / repeg cost (teaser only: peg updates cost the AMM when net-exposed, paid from fee pool; full mechanics Ring 22)
+- account (the universal Solana storage unit; everything -- wallets, tokens, program state -- is an account)
+- PDA (program-derived address; account owned by a program with no private key, program writes freely)
+- four pillars (Drift's top-level account layout: State singleton, PerpMarket per perp, SpotMarket per collateral token, User per trader subaccount)
+- State / PerpMarket / SpotMarket / User (the four account types; PerpMarket holds the AMM reserves + peg + sqrt_k for its market)
+- fixed-point / scaler (store decimal numbers as integers by multiplying by a fixed power of 10)
+- PRICE_PRECISION = 10^6 (Drift's standard multiplier for prices)
+- BASE_PRECISION = 10^9 (matches SOL's native 10^9 lamport granularity)
+- QUOTE_PRECISION = 10^6 (matches USDC's native 10^6 atomic granularity)
+- overflow / silent wrapping (u64 max ~1.8×10^19; Rust release-mode overflow wraps silently -- catastrophic for money math)
+- checked_mul / checked_add / checked_sub / checked_div (arithmetic that returns Option<T>; None on overflow)
+- ok_or(ErrorCode::MathError)? (Drift's idiom: convert Option → Result → bubble up)
+- u64 (the 64-bit unsigned integer type; holds up to ~1.8×10^19)
+- position / PerpPosition (the stored record of a bet; lives on the User account)
+- base_asset_amount (signed i64 on PerpPosition; sign = direction, magnitude = size in base-asset atomic units)
+- quote_asset_amount (signed i64 on PerpPosition; the cash side of the swap; always OPPOSITE sign to base; stores NOTIONAL not collateral)
+- signed encoding (collapsing "size + direction" into a single signed integer; Drift uses this across position records)
+- IN/OUT sign convention (from the position's perspective: received = +, gave up = −; applies to both base and quote)
+- notional (size × entry price; what was exchanged in the swap, NOT what was deposited)
+- quote_entry_amount (quote snapshot at open, BEFORE any fees)
+- quote_break_even_amount (the quote level needed to net-zero including fees paid; equals entry at open, drifts as fees accumulate — Ring 7)
+- entry price (derivable: quote_entry_amount / base_asset_amount)
+- break-even price (derivable: quote_break_even_amount / base_asset_amount)
+- PositionDirection enum (Long/Short; used on the Order struct in Ring 6; NOT stored on PerpPosition — sign of base_asset_amount IS the direction there)
 
 ## Next Up
-
-### Learning side — Ring 1 re-anchor
-- Concepts 1–4: trading, futures, perpetual, exchange.
-- Format: full-picture per ACTIVE STYLE DIRECTIVE. Since vocabulary above is banked, this is a **fast re-anchor** — frame the 4 pieces as a system ("marketplace + agreement + never-expiring + middleman"), emphasize the counterparty-matching motivating question the user independently derived last time, end with ONE verification question.
-- Do NOT belabor. User is not a beginner.
-
-### Build side — Ring 1 first code-adjacent deliverable
-At Ring 1 learning close, **pivot immediately to the Ring 1 Build section of `drift-build/README.md`** — this is the new lockstep mode. Specifically:
-1. Prompt: *"Now run `git init` inside `~/Documents/learning/perpetual/mini-drift/`."*
-2. Prompt: *"Now write the root `README.md`."* Give them the skeleton structure from `drift-build/README.md` §5 (vision, monorepo layout, empty milestone checkboxes), but they write it.
-3. Prompt: *"Now write `docs/rings/R01-what-is-a-perp.md`."* 800 words in their own words. This is the writing-reps muscle memory for the interview talking points later.
-4. Close Ring 1 in both tracks: tick checkbox in this file AND in `drift-build/README.md` §11. Then preview Ring 2's connection to Ring 1.
-
-### Session-level open for the new chat
-When the user opens a fresh session, greet per CLAUDE.md INITIALIZATION PROTOCOL: confirm you've read all three files (`learning/master_map.md`, `learning/learning_state.md`, `drift-build/README.md`), note that this is a post-reset re-anchor at Ring 1 with build lockstep, and ask: *"Ready to re-anchor Ring 1?"*
+- Ring 6 — Placing your bet. Concepts 25-31: Order struct, OrderType enum (Market / Limit / TriggerMarket / TriggerLimit / Oracle — the Oracle type sources price from a feed, forward ref Ring 10), OrderParams (what the user submits), Order lifecycle (Open → Filled / Canceled / Expired), reduce-only (can only shrink a position), post-only (must rest as maker — full maker/taker distinction Ring 23), IOC (immediate-or-cancel).
+- Delivery: full-picture per ACTIVE STYLE DIRECTIVE. Frame the motivating problem (you have a position record from Ring 5 — how do you CREATE one?), give a summary table of order types, walk the lifecycle, explain the three toggles (reduce-only / post-only / IOC) concretely, point at source files (`programs/drift/src/state/user.rs` for Order struct, `state/order_params.rs` for OrderParams). End with ONE retention check, not a drill.
+- Vocabulary to unlock during Ring 6: order, limit, market order, trigger, reduce-only, post-only, IOC, OrderType, OrderParams, OrderStatus, maker / taker (teaser — full mechanics Ring 23), Oracle-type order (teaser — price source Ring 10).
+- Forward refs to plant during Ring 6: Ring 7 (Dutch auction gives market orders a price, taker/maker fees on fill), Ring 10 (Oracle order type's price source), Ring 23 (maker/taker matching engine).
+- Forward refs still outstanding from earlier rings: Ring 7 (entry vs break-even via fees — hit it in Ring 7), Ring 9 (price impact, sqrt_k, open interest), Ring 10 (oracle mechanics), Ring 11 (bid/ask spread), Ring 14 (funding rate, last_cumulative_funding_rate on PerpPosition), Ring 22 (repeg), Ring 24 (LPs / virtual reserve origination).

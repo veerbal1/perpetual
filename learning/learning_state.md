@@ -3,7 +3,7 @@
 ## Current Position
 - Ring: 6 of 26
 - Active Concept: 25-31 (Order struct, order types, lifecycle, reduce-only, post-only, IOC)
-- Status: IN PROGRESS — Chunks 1/6 and 2/6 (full sub-chunked OrderType walkthrough 2a→2g) COMPLETE as of 2026-04-28. User has all 5 OrderType rules locked + the "5 rules → 3 machines" synthesis. Awaiting "next" for Chunk 3/6 (Order struct anatomy + OrderParams: what user submits vs what gets stored).
+- Status: IN PROGRESS — Ring 6 learning side COMPLETE as of 2026-04-29. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, the three toggles, and the reduce-only scenario. Next: Ring 6 build side in `mini-drift`, starting with wiring `User.orders` and `place_perp_order` per `drift-build/README.md`.
 
 ## Ring 6 Chunk Plan
 - [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
@@ -18,12 +18,12 @@
 - [ ] 3/6 — Order struct anatomy + OrderParams (IN PROGRESS, sub-chunked):
   - [x] 3a — Motivation: WHY two structs? OrderParams = request form; Order = stored record. Bank-deposit-slip analogy. Source files: `state/order_params.rs` + `state/user.rs`. Stored Orders live in User account fixed-size array (callback to Ring 4 four-pillars) (delivered 2026-04-28)
   - [x] 3b — OrderParams walkthrough: 17 fields organized into 5 clusters (Identity-7, Toggles-3, Trigger-2, Auction-3, Oracle+lifetime-2). Concrete OrderParams literal for "Limit Long 2 SOL @ $185 on SOL-PERP" with PRICE_PRECISION/BASE_PRECISION values. Toggle deep-dive deferred to Chunk 5/6, lifecycle (max_ts) deferred to Chunk 4/6 (delivered 2026-04-28)
-  - [ ] 3c — Order walkthrough: what's IN the stored record. Highlight protocol-stamped fields (slot, order_id, status, base_asset_amount_filled, quote_asset_amount_filled, existing_position_direction, posted_slot_tail) NOT present in OrderParams
-  - [ ] 3d — Side-by-side delta: what's added/normalized between submission and storage (Option<T> → defaults, post_only enum → bool, IOC bit_flag → bool)
-  - [ ] 3e — Worked example: user submits OrderParams { Limit, Long, 2 SOL, price $185, market_index SOL-PERP } → protocol stores Order { same fields + order_id, slot, status=Open, fills=0, existing_position_direction }
-- [ ] 4/6 — Lifecycle: OrderStatus (Init → Open → Filled / Canceled); note there is NO Expired terminal state — max_ts triggers cancellation
-- [ ] 5/6 — The three toggles: reduce_only (bool), post_only (FOUR variants — plot twist; None/MustPostOnly/TryPostOnly/Slide), IOC (lives inside bit_flags — not a bool; OrderParamsBitFlag::ImmediateOrCancel = 0b00000001)
-- [ ] 6/6 — Single ring-close scenario check (not a drill)
+  - [x] 3c — Order walkthrough: what's IN the stored record. Highlighted protocol-stamped fields (slot, order_id, status, base_asset_amount_filled, quote_asset_amount_filled, existing_position_direction, posted_slot_tail) NOT present in OrderParams. User locked: Params = ask, Order = ask + memory/progress, PerpPosition = one per-market net position folder. (delivered 2026-04-29)
+  - [x] 3d — Side-by-side delta: what's added/normalized between submission and storage (Option<T> → defaults, post_only enum → bool, IOC bit_flag → bool). User needed extra post-only examples; locked: post-only prevents immediate fill at placement but can fill later. (delivered 2026-04-29)
+  - [x] 3e — Worked example: user submits OrderParams { Limit, Long, 2 SOL, price $185, market_index SOL-PERP } → protocol stores Order { same fields + order_id, slot, status=Open, fills=0, existing_position_direction }. Added fixed-shelf examples for unfilled, partial, and filled orders. (delivered 2026-04-29)
+- [x] 4/6 — Lifecycle: OrderStatus (Init → Open → Filled / Canceled); note there is NO Expired terminal state — max_ts triggers cancellation. User locked: Canceled stops remaining waiting amount but does not undo fills; expiry via max_ts becomes Canceled, not Expired; only Open orders count as waiting. (delivered 2026-04-29)
+- [x] 5/6 — The three toggles: reduce_only (bool), post_only (FOUR variants — plot twist; None/MustPostOnly/TryPostOnly/Slide), IOC (lives inside bit_flags — not a bool; OrderParamsBitFlag::ImmediateOrCancel = 0b00000001). User locked: reduce-only moves toward zero and cannot flip; post-only must wait first and has None/Must/Try/Slide request styles; IOC fills now and cancels leftover. (delivered 2026-04-29)
+- [x] 6/6 — Single ring-close scenario check (not a drill). User answered reduce-only correctly: short 7 against long 5 can reduce to zero but cannot open short 2. Clarified one slip: placing the order does not zero the existing position; fills move the position. (delivered 2026-04-29)
 
 ## ACTIVE STYLE DIRECTIVE (supersedes all prior style notes)
 - Set 2026-04-20 mid-Ring-5. User reported HEADACHES from constant atomic-Socratic questioning ("answering a lot of questions after each interaction").

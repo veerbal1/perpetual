@@ -3,7 +3,7 @@
 ## Current Position
 - Ring: 6 of 26
 - Active Concept: 25-31 (Order struct, order types, lifecycle, reduce-only, post-only, IOC)
-- Status: IN PROGRESS — Ring 6 learning side COMPLETE as of 2026-04-29. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, the three toggles, and the reduce-only scenario. Next: Ring 6 build side in `mini-drift`, starting with wiring `User.orders` and `place_perp_order` per `drift-build/README.md`.
+- Status: IN PROGRESS — Ring 6 learning side COMPLETE as of 2026-04-29. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, the three toggles, and the reduce-only scenario. Ring 6 build side is active in `mini-drift`. Current repair before `place_perp_order`: add Drift-shaped `PerpPosition::is_available()` / `is_for(market_index)` helpers so market index alone is not treated as shelf identity.
 
 ## Ring 6 Chunk Plan
 - [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
@@ -33,6 +33,7 @@
 - CHUNKING RULE (added 2026-04-20, mid-Ring-5 review): for LONG walkthroughs (e.g. full-diagram reviews, multi-concept syntheses), split into numbered chunks (e.g. "1 / 8") and deliver ONE chunk per turn. End each chunk with "say 'next' when ready" — user paces. Do NOT dump 2000+ word explainers in one message even when style is "full picture." Full picture per ring is fine; full picture per SINGLE concept is better for reviews.
 - FINER CHUNKING (added 2026-04-28 mid-Ring-6): user explicitly said "this ring should be compiled by every bit in my brain. Use easy to understand vocabulary." After Chunk 2/6 delivered all 5 order types in one big table, user pushed back asking for ONE concept per turn. Going forward: each top-level chunk in the ring plan is broken into atomic SUB-CHUNKS (e.g. 2a, 2b, 2c). One sub-chunk = ONE small idea (~150-250 words), plain English first, source-code naming AFTER the idea lands. End with "say 'next' when ready". A long table or comparison is the LAST sub-chunk after all rows are taught individually. This applies for the rest of Ring 6 and likely future rings too — keep watching the user's signal.
 - VOCAB GUARD (reinforced 2026-04-28): in early sub-chunks of any concept, prefer plain English ("the rule label", "wait in line") over the code term. Introduce the actual struct field / enum name only AFTER the concept clicks. Source-file pointers come at the END of the ring or sub-section, not at the top.
+- FRUSTRATION GUARD (added 2026-04-30 during Ring-6 build): user got overwhelmed and cried when multiple layers were stacked at once (`is_available` / `is_for`, Drift invariant, market-index-0 edge case, Rust `Option`, `iter().position`, and mutation path). New hard rule for build tutoring: never combine a new protocol invariant with new Rust syntax in the same teaching chunk. Teach in this order: (1) plain object/locker analogy, (2) one concrete state table, (3) one helper's input/output only, (4) only then the Rust syntax, (5) only then composition with another helper. If user shows frustration, immediately stop coding, validate the load, summarize the one current idea, and offer a reset/pause. Do not ask the user to continue writing code while emotionally overloaded.
 - Still forbidden per CLAUDE.md: writing full implementation code, auto-solving user code, creating files beyond master_map.md / learning_state.md. Pseudocode + tiny syntax snippets still allowed.
 
 ## Progress Overview
@@ -80,6 +81,9 @@
 - [ ] Ring 26: Special modes & infrastructure: high leverage, isolated, prediction, guard rails, events, full spot deep dive, DEX
 
 ## Mastery Notes
+
+### Ring 6
+- Build-side Drift-alignment gap found 2026-04-30 before `place_perp_order`: mini-drift initially used `market_index == market_index` and `base_asset_amount == 0` to find/allocate perp position shelves. User correctly spotted the market-index-0 ambiguity and the "flat but used folder" problem. Roadmap updated: Ring 6 now explicitly requires `PerpPosition::is_available()` and `is_for(market_index)` before order placement, matching Drift's invariant that market label + availability state define whether a shelf is real.
 
 ### Ring 1
 - User knows long/short conceptually at a basic/UI level but does NOT actively trade perps. Do not assume trader intuition for PnL math, funding, liquidations, etc. Verify from scratch.

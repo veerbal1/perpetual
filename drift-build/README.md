@@ -432,6 +432,7 @@ R15 replaces the simple ledger with Drift-shaped `SpotPosition` + vault logic.
   - `OrderParams` mirrors Drift's request-vs-storage split. Optional params normalize into stored defaults at insertion time.
   - `orders: [Order; 16]` slot on `User`
   - `PerpPosition::is_available()` and `PerpPosition::is_for(market_index)` helpers before order placement. Match Drift's invariant: market index alone is not enough; a position is "for" a market only when the shelf is not available. Do **not** use `base_asset_amount == 0` as the empty-shelf test.
+  - Drift-alignment rule for these helpers: copy Drift's condition shape exactly, using the same helper names where possible: `!is_open_position() && !has_open_order() && !has_unsettled_pnl() && isolated_position_scaled_balance == 0 && !is_being_liquidated()`. If a Drift field is missing from mini-drift, either add it now or explicitly park it with the future ring that owns it; never silently ignore it as a "mini project" shortcut.
   - `instructions/user.rs::place_perp_order(params: OrderParams)` — validates, inserts into first available slot, emits `OrderRecord` event
 - **Tests:** happy path + "no free slot" failure + reduce-only on empty position = reject + unsupported trigger/oracle order rejected with specific error. Add one serialization/account-size test for the fixed order array. Add position-shelf tests for market index `0`, flat-but-used positions, and available-vs-assigned shelves.
 - **Est.:** 2 days

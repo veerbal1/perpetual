@@ -7,7 +7,7 @@
 
 ## Ring 6 Chunk Plan
 - [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
-- [ ] 2/6 — The 5 OrderType flavors (IN PROGRESS, sub-chunked):
+- [x] 2/6 — The 5 OrderType flavors (COMPLETE, sub-chunked):
   - [x] 2a — Motivation: an order needs a "rule label" called OrderType; coffee-shop analogy; five rules total (delivered 2026-04-28)
   - [x] 2b — Market rule: fill now, no price commitment, no wait condition; Dutch auction is forward-ref Ring 7 (delivered 2026-04-28)
   - [x] 2c — Limit rule: "or better" clause (ceiling for buys / floor for sells), two cases (CROSS or REST), trade-off table, maker/taker teaser for Ring 23 (delivered 2026-04-28)
@@ -15,7 +15,7 @@
   - [x] 2e — TriggerLimit: same arming as 2d, TWO prices (trigger + limit), flash-crash failure mode (limit floor protects price BUT can strand the position), TriggerMarket vs TriggerLimit comparison table (delivered 2026-04-28)
   - [x] 2f — Oracle rule: brief aside on "oracle = live external truth price" (callback to user's own Ring 1 'rain is independent' analogy + Ring 3 peg); Oracle order = Market with auction prices as OFFSETS not absolutes; volatility/stale-price motivation; bot/market-maker use case; full oracle mechanics deferred to Ring 10 (delivered 2026-04-28)
   - [x] 2g — Synthesis: 5-row comparison table, two-family tree (ACTIVE NOW vs ARMED & WAITING; auction vs price-pinned), use-case cheat sheet, mental model "5 rules → 3 underlying machines (auction / resting-limit / armed-watcher wrapper)" (delivered 2026-04-28). 2/6 COMPLETE.
-- [ ] 3/6 — Order struct anatomy + OrderParams (IN PROGRESS, sub-chunked):
+- [x] 3/6 — Order struct anatomy + OrderParams (COMPLETE, sub-chunked):
   - [x] 3a — Motivation: WHY two structs? OrderParams = request form; Order = stored record. Bank-deposit-slip analogy. Source files: `state/order_params.rs` + `state/user.rs`. Stored Orders live in User account fixed-size array (callback to Ring 4 four-pillars) (delivered 2026-04-28)
   - [x] 3b — OrderParams walkthrough: 17 fields organized into 5 clusters (Identity-7, Toggles-3, Trigger-2, Auction-3, Oracle+lifetime-2). Concrete OrderParams literal for "Limit Long 2 SOL @ $185 on SOL-PERP" with PRICE_PRECISION/BASE_PRECISION values. Toggle deep-dive deferred to Chunk 5/6, lifecycle (max_ts) deferred to Chunk 4/6 (delivered 2026-04-28)
   - [x] 3c — Order walkthrough: what's IN the stored record. Highlighted protocol-stamped fields (slot, order_id, status, base_asset_amount_filled, quote_asset_amount_filled, existing_position_direction, posted_slot_tail) NOT present in OrderParams. User locked: Params = ask, Order = ask + memory/progress, PerpPosition = one per-market net position folder. (delivered 2026-04-29)
@@ -34,6 +34,7 @@
 - FINER CHUNKING (added 2026-04-28 mid-Ring-6): user explicitly said "this ring should be compiled by every bit in my brain. Use easy to understand vocabulary." After Chunk 2/6 delivered all 5 order types in one big table, user pushed back asking for ONE concept per turn. Going forward: each top-level chunk in the ring plan is broken into atomic SUB-CHUNKS (e.g. 2a, 2b, 2c). One sub-chunk = ONE small idea (~150-250 words), plain English first, source-code naming AFTER the idea lands. End with "say 'next' when ready". A long table or comparison is the LAST sub-chunk after all rows are taught individually. This applies for the rest of Ring 6 and likely future rings too — keep watching the user's signal.
 - VOCAB GUARD (reinforced 2026-04-28): in early sub-chunks of any concept, prefer plain English ("the rule label", "wait in line") over the code term. Introduce the actual struct field / enum name only AFTER the concept clicks. Source-file pointers come at the END of the ring or sub-section, not at the top.
 - FRUSTRATION GUARD (added 2026-04-30 during Ring-6 build): user got overwhelmed and cried when multiple layers were stacked at once (`is_available` / `is_for`, Drift invariant, market-index-0 edge case, Rust `Option`, `iter().position`, and mutation path). New hard rule for build tutoring: never combine a new protocol invariant with new Rust syntax in the same teaching chunk. Teach in this order: (1) plain object/locker analogy, (2) one concrete state table, (3) one helper's input/output only, (4) only then the Rust syntax, (5) only then composition with another helper. If user shows frustration, immediately stop coding, validate the load, summarize the one current idea, and offer a reset/pause. Do not ask the user to continue writing code while emotionally overloaded.
+- DRIFT-ALIGNMENT GUARD (added 2026-05-01): user explicitly does not want invented mini-project shortcuts. Before build prompts, compare the exact Drift source slice and name every field/helper the invariant depends on. If mini-drift is missing a field, either add that field now or park it explicitly with the future ring that owns it; never silently ignore it as "simplified."
 - Still forbidden per CLAUDE.md: writing full implementation code, auto-solving user code, creating files beyond master_map.md / learning_state.md. Pseudocode + tiny syntax snippets still allowed.
 
 ## Progress Overview
@@ -48,7 +49,7 @@
 
 ### PHASE 3 - THE TRADE
 - [x] Ring 5: PerpPosition struct, base/quote, direction -- COMPLETED 2026-04-20
-- [ ] Ring 6: Order struct, types, lifecycle, reduce-only, post-only -- UP NEXT
+- [ ] Ring 6: Order struct, types, lifecycle, reduce-only, post-only -- IN PROGRESS (learning complete, build active)
 - [ ] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill
 - [ ] Ring 8: Position updates: open/increase/decrease/close
 
@@ -184,9 +185,8 @@
 - break-even price (derivable: quote_break_even_amount / base_asset_amount)
 - PositionDirection enum (Long/Short; used on the Order struct in Ring 6; NOT stored on PerpPosition — sign of base_asset_amount IS the direction there)
 
-## Next Up
-- Ring 6 — Placing your bet. Concepts 25-31: Order struct, OrderType enum (Market / Limit / TriggerMarket / TriggerLimit / Oracle — the Oracle type sources price from a feed, forward ref Ring 10), OrderParams (what the user submits), Order lifecycle (Open → Filled / Canceled / Expired), reduce-only (can only shrink a position), post-only (must rest as maker — full maker/taker distinction Ring 23), IOC (immediate-or-cancel).
-- Delivery: full-picture per ACTIVE STYLE DIRECTIVE. Frame the motivating problem (you have a position record from Ring 5 — how do you CREATE one?), give a summary table of order types, walk the lifecycle, explain the three toggles (reduce-only / post-only / IOC) concretely, point at source files (`programs/drift/src/state/user.rs` for Order struct, `state/order_params.rs` for OrderParams). End with ONE retention check, not a drill.
-- Vocabulary to unlock during Ring 6: order, limit, market order, trigger, reduce-only, post-only, IOC, OrderType, OrderParams, OrderStatus, maker / taker (teaser — full mechanics Ring 23), Oracle-type order (teaser — price source Ring 10).
-- Forward refs to plant during Ring 6: Ring 7 (Dutch auction gives market orders a price, taker/maker fees on fill), Ring 10 (Oracle order type's price source), Ring 23 (maker/taker matching engine).
+- Ring 6 build — continue from the position-shelf helpers before `place_perp_order`. Next tiny build idea: `force_get_perp_position_index(market_index)` should first reuse an existing non-available position for that market; if none exists, it should take an available shelf and assign that market index.
+- Delivery: use the FRUSTRATION GUARD. Start with one plain shelf table, then one helper input/output contract, then Rust syntax only after the idea lands.
+- After this bridge lands: continue toward `place_perp_order`, `OrderRecord`, and focused tests.
+- Forward refs to keep parked: Ring 7 (Dutch auction + fees on fill), Ring 10 (Oracle order type's price source), Ring 23 (maker/taker matching engine).
 - Forward refs still outstanding from earlier rings: Ring 7 (entry vs break-even via fees — hit it in Ring 7), Ring 9 (price impact, sqrt_k, open interest), Ring 10 (oracle mechanics), Ring 11 (bid/ask spread), Ring 14 (funding rate, last_cumulative_funding_rate on PerpPosition), Ring 22 (repeg), Ring 24 (LPs / virtual reserve origination).

@@ -3,7 +3,7 @@
 ## Current Position
 - Ring: 6 of 26
 - Active Concept: 25-31 (Order struct, order types, lifecycle, reduce-only, post-only, IOC)
-- Status: IN PROGRESS — Ring 6 learning side COMPLETE as of 2026-04-29. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, the three toggles, and the reduce-only scenario. Ring 6 build side is active in `mini-drift`. Current repair before `place_perp_order`: add Drift-shaped `PerpPosition::is_available()` / `is_for(market_index)` helpers so market index alone is not treated as shelf identity.
+- Status: IN PROGRESS — Ring 6 learning side COMPLETE as of 2026-04-29. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, the three toggles, and the reduce-only scenario. Ring 6 build side is active in `mini-drift`. Position shelf repair completed 2026-05-01: Drift-shaped `PerpPosition::is_available()`, `is_for(market_index)`, and `force_get_perp_position_index(market_index)` are built and Rust-tested. Next build target: order slot storage and wiring `place_perp_order` to the position shelf.
 
 ## Ring 6 Chunk Plan
 - [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
@@ -85,6 +85,8 @@
 
 ### Ring 6
 - Build-side Drift-alignment gap found 2026-04-30 before `place_perp_order`: mini-drift initially used `market_index == market_index` and `base_asset_amount == 0` to find/allocate perp position shelves. User correctly spotted the market-index-0 ambiguity and the "flat but used folder" problem. Roadmap updated: Ring 6 now explicitly requires `PerpPosition::is_available()` and `is_for(market_index)` before order placement, matching Drift's invariant that market label + availability state define whether a shelf is real.
+- Position shelf repair completed and committed 2026-05-01. User built Drift-shaped helper chain: `is_open_position`, `has_open_order`, `has_unsettled_pnl`, `is_being_liquidated`, `is_available`, `is_for`, and `force_get_perp_position_index`. Rust tests covered: existing market folder wins, available folder is reused and relabeled, and no free slot returns exact `NoPerpPositionSlotAvailable`.
+- Teaching style that worked extremely well on 2026-05-01: tiny chunks, easy vocabulary, one neuron per message, explicit repetition. User explicitly said they deeply understood because of this format. Continue this style for order-slot storage and `place_perp_order`.
 
 ### Ring 1
 - User knows long/short conceptually at a basic/UI level but does NOT actively trade perps. Do not assume trader intuition for PnL math, funding, liquidations, etc. Verify from scratch.
@@ -185,8 +187,8 @@
 - break-even price (derivable: quote_break_even_amount / base_asset_amount)
 - PositionDirection enum (Long/Short; used on the Order struct in Ring 6; NOT stored on PerpPosition — sign of base_asset_amount IS the direction there)
 
-- Ring 6 build — continue from the position-shelf helpers before `place_perp_order`. Next tiny build idea: `force_get_perp_position_index(market_index)` should first reuse an existing non-available position for that market; if none exists, it should take an available shelf and assign that market index.
-- Delivery: use the FRUSTRATION GUARD. Start with one plain shelf table, then one helper input/output contract, then Rust syntax only after the idea lands.
-- After this bridge lands: continue toward `place_perp_order`, `OrderRecord`, and focused tests.
+- Ring 6 build — position shelf helpers are complete. Next tiny build idea: order slots. Teach `Order` slot vs `PerpPosition` folder, then `Order::is_available()` / `get_available_order_index()` before wiring `place_perp_order`.
+- Delivery: use the FRUSTRATION GUARD and the 2026-05-01 tiny-neuron style. Start with one plain table, one input/output contract, then Rust syntax only after the idea lands.
+- After order-slot helpers land: wire `place_perp_order`, `OrderRecord`, and focused tests.
 - Forward refs to keep parked: Ring 7 (Dutch auction + fees on fill), Ring 10 (Oracle order type's price source), Ring 23 (maker/taker matching engine).
 - Forward refs still outstanding from earlier rings: Ring 7 (entry vs break-even via fees — hit it in Ring 7), Ring 9 (price impact, sqrt_k, open interest), Ring 10 (oracle mechanics), Ring 11 (bid/ask spread), Ring 14 (funding rate, last_cumulative_funding_rate on PerpPosition), Ring 22 (repeg), Ring 24 (LPs / virtual reserve origination).

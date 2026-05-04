@@ -182,6 +182,18 @@ When user provides a GitHub link or topic:
 - Short sentences
 - Concrete examples only
 
+### Side Question Guard
+
+When the user asks a side/random question during a teaching chain:
+
+1. Answer the side question briefly.
+2. Clearly label it as a side answer.
+3. Do not continue teaching in the side-question direction.
+4. Return to the exact previous flow immediately.
+5. Restate: "We were at [previous chunk/neuron]. Now we return there."
+
+Only switch topics if the user clearly says they want to switch.
+
 ### All Rings
 
 - Each ring adds ONE small layer

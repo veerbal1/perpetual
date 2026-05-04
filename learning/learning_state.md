@@ -1,9 +1,9 @@
 # LEARNING STATE
 
 ## Current Position
-- Ring: 6 of 26
-- Active Concept: 25-31 (Order struct, order types, lifecycle, reduce-only, post-only, IOC)
-- Status: IN PROGRESS — Ring 6 learning side COMPLETE as of 2026-04-29. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, the three toggles, and the reduce-only scenario. Ring 6 build side is active in `mini-drift`. Position shelf repair completed 2026-05-01: Drift-shaped `PerpPosition::is_available()`, `is_for(market_index)`, and `force_get_perp_position_index(market_index)` are built and Rust-tested. Next build target: order slot storage and wiring `place_perp_order` to the position shelf.
+- Ring: 7 of 26
+- Active Concept: 32-37 (Dutch auctions, keepers/fillers, fill flow, fees-on-fill)
+- Status: READY TO START — Ring 6 learning and core build completed on 2026-05-03. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, supported-vs-unsupported order types, reduce-only placement checks, OrderRecord events, and the instruction → handler → controller split.
 
 ## Ring 6 Chunk Plan
 - [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
@@ -35,6 +35,8 @@
 - VOCAB GUARD (reinforced 2026-04-28): in early sub-chunks of any concept, prefer plain English ("the rule label", "wait in line") over the code term. Introduce the actual struct field / enum name only AFTER the concept clicks. Source-file pointers come at the END of the ring or sub-section, not at the top.
 - FRUSTRATION GUARD (added 2026-04-30 during Ring-6 build): user got overwhelmed and cried when multiple layers were stacked at once (`is_available` / `is_for`, Drift invariant, market-index-0 edge case, Rust `Option`, `iter().position`, and mutation path). New hard rule for build tutoring: never combine a new protocol invariant with new Rust syntax in the same teaching chunk. Teach in this order: (1) plain object/locker analogy, (2) one concrete state table, (3) one helper's input/output only, (4) only then the Rust syntax, (5) only then composition with another helper. If user shows frustration, immediately stop coding, validate the load, summarize the one current idea, and offer a reset/pause. Do not ask the user to continue writing code while emotionally overloaded.
 - DRIFT-ALIGNMENT GUARD (added 2026-05-01): user explicitly does not want invented mini-project shortcuts. Before build prompts, compare the exact Drift source slice and name every field/helper the invariant depends on. If mini-drift is missing a field, either add that field now or park it explicitly with the future ring that owns it; never silently ignore it as "simplified."
+- DRIFT-STRUCTURE GUARD (added 2026-05-02): user explicitly wants `mini-drift` to follow Drift's file structure, code organization, and architecture as closely as possible, not only the concepts. Going forward, prefer Drift-shaped modules such as `controller/orders.rs`, `controller/position.rs`, `state/user.rs`, `state/order_params.rs`, and `math/*` as soon as a mechanism belongs there. If we temporarily keep something simpler, name it as temporary and move it before it grows. Never let "mini" become an excuse for student-project architecture.
+- SIDE-QUESTION GUARD (added 2026-05-04): when user asks a side/random question during a chunk chain, answer it briefly, explicitly label it as a side answer, then return to the exact previous teaching flow. Do not continue teaching in the side-question direction unless user clearly says to switch topics. After side answer, restate: "We were at [previous chunk/neuron]. Now we return there."
 - Still forbidden per CLAUDE.md: writing full implementation code, auto-solving user code, creating files beyond master_map.md / learning_state.md. Pseudocode + tiny syntax snippets still allowed.
 
 ## Progress Overview
@@ -49,7 +51,7 @@
 
 ### PHASE 3 - THE TRADE
 - [x] Ring 5: PerpPosition struct, base/quote, direction -- COMPLETED 2026-04-20
-- [ ] Ring 6: Order struct, types, lifecycle, reduce-only, post-only -- IN PROGRESS (learning complete, build active)
+- [x] Ring 6: Order struct, types, lifecycle, reduce-only, post-only -- COMPLETED 2026-05-03
 - [ ] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill
 - [ ] Ring 8: Position updates: open/increase/decrease/close
 
@@ -83,10 +85,20 @@
 
 ## Mastery Notes
 
+### Ring 7
+- Roadmap gap found 2026-05-04 during Dutch auction study: teaching `calculate_auction_price` without first teaching how Drift derives `auction_start_price`, `auction_end_price`, and `auction_duration` created a knowledge gap. Ring 7 roadmap updated to include `controller/orders.rs::get_auction_params`, `math/auction.rs::calculate_auction_prices`, `state/order_params.rs::derive_market_order_auction_params` / `get_auction_duration`, tick standardization, price-band validation, and `PerpMarket::amm_can_fill_order`.
+- User correctly questioned unrealistic training numbers (`100 -> 108`) and asked how Drift bounds real auction prices. Locked correction: simple market-order auction boundaries are oracle anchored; default examples should use Drift-shaped small bands (e.g. oracle $100, 0.5% band around $100 / $100.50) unless deliberately using toy numbers for arithmetic.
+- Full Ring 7 audit completed 2026-05-04 against Drift sources. Additional gaps patched into roadmap: keeper fill entry, place-and-take entry, `FillMode`, final fill-price validation, cleanup paths (`should_expire_order`, reduce-only-now-invalid cancellation), flat keeper reward rules, open bid/ask decrease on fill, `OrderActionRecord`, and the strict R7->R8 boundary. Key invariant: do not mark `Order.base_asset_amount_filled` / `Filled` unless the R8-owned position update succeeds, because Drift mutates position before order progress in `fulfill_perp_order_with_amm`.
+
 ### Ring 6
 - Build-side Drift-alignment gap found 2026-04-30 before `place_perp_order`: mini-drift initially used `market_index == market_index` and `base_asset_amount == 0` to find/allocate perp position shelves. User correctly spotted the market-index-0 ambiguity and the "flat but used folder" problem. Roadmap updated: Ring 6 now explicitly requires `PerpPosition::is_available()` and `is_for(market_index)` before order placement, matching Drift's invariant that market label + availability state define whether a shelf is real.
 - Position shelf repair completed and committed 2026-05-01. User built Drift-shaped helper chain: `is_open_position`, `has_open_order`, `has_unsettled_pnl`, `is_being_liquidated`, `is_available`, `is_for`, and `force_get_perp_position_index`. Rust tests covered: existing market folder wins, available folder is reused and relabeled, and no free slot returns exact `NoPerpPositionSlotAvailable`.
 - Teaching style that worked extremely well on 2026-05-01: tiny chunks, easy vocabulary, one neuron per message, explicit repetition. User explicitly said they deeply understood because of this format. Continue this style for order-slot storage and `place_perp_order`.
+- Open bids/asks neuron clarified 2026-05-02: Ring 6 only stores waiting exposure on `PerpPosition` (`open_bids` for future long/buy pressure, `open_asks` as negative future short/sell pressure). Full risk/margin use of these fields is intentionally parked for Rings 17-18, where they help compute worst possible position if waiting orders fill.
+- Ring 6 core build completed and pushed 2026-05-03. User built `Order::is_available`, `get_available_order_index`, `force_get_available_order_index`, `Order::new_from_params`, Drift-shaped `controller/orders.rs::place_perp_order`, `controller/position.rs::increase_open_bids_and_asks`, `state/events.rs::OrderRecord`, and `instructions/user.rs::handle_place_perp_order`.
+- Ring 6 tests now cover Market/Limit storage, unsupported Oracle/Trigger rejection, no order slot, no position slot, reduce-only without position, reduce-only same direction, reduce-only opposite direction, open bid/ask accounting, existing position direction snapshot, and order-slot helpers. Final checks passed before push: `cargo check`, `cargo test` (20 tests), and `cargo clippy -- -D warnings`.
+- Important neuron locked on 2026-05-03: placing an order does not change `base_asset_amount`; it stores a waiting order, increments open-order/open-bid/open-ask tracking, and emits an event. Fill flow in Ring 7/8 is what will change the actual position size.
+- Security neuron added at Ring 6 close: public Anchor instruction gathers context and accounts, but controller owns logic. `PlacePerpOrder` uses `has_one = authority` so a signer cannot place orders through someone else's `User` account.
 
 ### Ring 1
 - User knows long/short conceptually at a basic/UI level but does NOT actively trade perps. Do not assume trader intuition for PnL math, funding, liquidations, etc. Verify from scratch.
@@ -186,9 +198,17 @@
 - entry price (derivable: quote_entry_amount / base_asset_amount)
 - break-even price (derivable: quote_break_even_amount / base_asset_amount)
 - PositionDirection enum (Long/Short; used on the Order struct in Ring 6; NOT stored on PerpPosition — sign of base_asset_amount IS the direction there)
+- order / Order (a waiting request to trade; stored in the User account's fixed order array)
+- OrderParams (the user request form) vs Order (the stored protocol record with status, id, progress, and snapshots)
+- order slot (one fixed shelf in the `orders` array; Open means busy, non-Open means reusable)
+- OrderStatus (Init, Open, Filled, Canceled; Open orders are waiting)
+- OrderType (Market, Limit, TriggerMarket, TriggerLimit, Oracle; Ring 6 executes only Market/Limit)
+- reduce_only (order rule: later fill may only move the position toward zero; placement itself does not reduce)
+- open_bids / open_asks (waiting long/buy pressure and waiting short/sell pressure on a PerpPosition)
+- OrderRecord (event receipt that copies and announces the stored order)
+- instruction handler vs controller (instruction gathers accounts/time/user key; controller owns state-changing order logic)
 
-- Ring 6 build — position shelf helpers are complete. Next tiny build idea: order slots. Teach `Order` slot vs `PerpPosition` folder, then `Order::is_available()` / `get_available_order_index()` before wiring `place_perp_order`.
-- Delivery: use the FRUSTRATION GUARD and the 2026-05-01 tiny-neuron style. Start with one plain table, one input/output contract, then Rust syntax only after the idea lands.
-- After order-slot helpers land: wire `place_perp_order`, `OrderRecord`, and focused tests.
+- Ring 7 next — start Dutch auction + fill flow. First neuron: an order is only a stored waiting plan until a filler/keeper fills it.
+- Delivery: keep the 2026-05-01 tiny-neuron style. Start with place-vs-fill recap, then one auction idea at a time.
 - Forward refs to keep parked: Ring 7 (Dutch auction + fees on fill), Ring 10 (Oracle order type's price source), Ring 23 (maker/taker matching engine).
 - Forward refs still outstanding from earlier rings: Ring 7 (entry vs break-even via fees — hit it in Ring 7), Ring 9 (price impact, sqrt_k, open interest), Ring 10 (oracle mechanics), Ring 11 (bid/ask spread), Ring 14 (funding rate, last_cumulative_funding_rate on PerpPosition), Ring 22 (repeg), Ring 24 (LPs / virtual reserve origination).

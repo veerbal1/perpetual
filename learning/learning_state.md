@@ -2,8 +2,8 @@
 
 ## Current Position
 - Ring: 7 of 26
-- Active Concept: 32-37 (Dutch auctions, keepers/fillers, fill flow, fees-on-fill)
-- Status: READY TO START — Ring 6 learning and core build completed on 2026-05-03. User has the OrderParams → Order → PerpPosition relationship locked, including fixed order shelves, per-market position folders, open-order counters, partial fills, shelf reuse, lifecycle statuses, supported-vs-unsupported order types, reduce-only placement checks, OrderRecord events, and the instruction → handler → controller split.
+- Active Concept: Ring 7 Slice 1 - Dutch auction setup and order-fill progress
+- Status: IN PROGRESS - Ring 7 study is partially complete. The first connected slice is ready for build: unfilled amount, partial-fill progress, position-before-order-progress invariant, open bids/asks decrease, open_orders decrease only on full fill, and fill event as receipt. R4/R5 foundation debt is intentionally parked for this small order-progress build slice only; return to it before any full trade demo or M1 close. Do not mark full Ring 7 complete yet; AMM route, maker route, FillMode, fees, keeper rewards, cleanup, and exact event fields are still pending.
 
 ## Ring 6 Chunk Plan
 - [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
@@ -24,6 +24,19 @@
 - [x] 4/6 — Lifecycle: OrderStatus (Init → Open → Filled / Canceled); note there is NO Expired terminal state — max_ts triggers cancellation. User locked: Canceled stops remaining waiting amount but does not undo fills; expiry via max_ts becomes Canceled, not Expired; only Open orders count as waiting. (delivered 2026-04-29)
 - [x] 5/6 — The three toggles: reduce_only (bool), post_only (FOUR variants — plot twist; None/MustPostOnly/TryPostOnly/Slide), IOC (lives inside bit_flags — not a bool; OrderParamsBitFlag::ImmediateOrCancel = 0b00000001). User locked: reduce-only moves toward zero and cannot flip; post-only must wait first and has None/Must/Try/Slide request styles; IOC fills now and cancels leftover. (delivered 2026-04-29)
 - [x] 6/6 — Single ring-close scenario check (not a drill). User answered reduce-only correctly: short 7 against long 5 can reduce to zero but cannot open short 2. Clarified one slip: placing the order does not zero the existing position; fills move the position. (delivered 2026-04-29)
+
+## Ring 7 Chunk Plan
+- [x] 1/8 - Place vs fill recap: placing stores a waiting order; filling changes real position state.
+- [x] 2/8 - Filler/keeper model: caller wakes the program; program checks rules and never trusts caller-provided safety.
+- [x] 3/8 - Dutch auction setup: oracle -> market side info -> start/end boundary -> final gap -> percent gap -> duration.
+- [x] 4/8 - Auction price at fill time: read saved auction fields, calculate elapsed slots, clamp elapsed by duration, move price by direction, then tick-round safely.
+- [x] 5/8 - Limit/fill safety: Long fills at or below wall; Short fills at or above wall; auction price can be the temporary wall when no explicit user limit exists.
+- [x] 6/8 - Partial fill storage: total order size stays fixed; `base_asset_amount_filled` tracks progress; unfilled = total - filled.
+- [x] 7/8 - Drift-shaped fill update order: position update must succeed before order progress can move; open bids/asks decrease as waiting exposure fills.
+- [x] 8/8 - Event mental model: fill event is a receipt emitted after successful state changes.
+- [x] Gate before Build Slice 1 - R4/R5 foundation debt intentionally parked for this order-progress-only slice; it is saved for later, not ignored.
+- [ ] Build Slice 1 - order-progress helpers and tests: unfilled amount, partial progress, full-fill status/count behavior, and no order progress if the R8 position-update boundary fails.
+- [ ] Study Slice 2 - AMM route, maker route, FillMode, fees, keeper reward, cleanup/cancel paths, exact `OrderActionRecord` fields.
 
 ## ACTIVE STYLE DIRECTIVE (supersedes all prior style notes)
 - Set 2026-04-20 mid-Ring-5. User reported HEADACHES from constant atomic-Socratic questioning ("answering a lot of questions after each interaction").
@@ -52,7 +65,7 @@
 ### PHASE 3 - THE TRADE
 - [x] Ring 5: PerpPosition struct, base/quote, direction -- COMPLETED 2026-04-20
 - [x] Ring 6: Order struct, types, lifecycle, reduce-only, post-only -- COMPLETED 2026-05-03
-- [ ] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill
+- [ ] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill -- IN PROGRESS, first study slice complete
 - [ ] Ring 8: Position updates: open/increase/decrease/close
 
 ### PHASE 4 - THE PRICING ENGINE
@@ -89,6 +102,8 @@
 - Roadmap gap found 2026-05-04 during Dutch auction study: teaching `calculate_auction_price` without first teaching how Drift derives `auction_start_price`, `auction_end_price`, and `auction_duration` created a knowledge gap. Ring 7 roadmap updated to include `controller/orders.rs::get_auction_params`, `math/auction.rs::calculate_auction_prices`, `state/order_params.rs::derive_market_order_auction_params` / `get_auction_duration`, tick standardization, price-band validation, and `PerpMarket::amm_can_fill_order`.
 - User correctly questioned unrealistic training numbers (`100 -> 108`) and asked how Drift bounds real auction prices. Locked correction: simple market-order auction boundaries are oracle anchored; default examples should use Drift-shaped small bands (e.g. oracle $100, 0.5% band around $100 / $100.50) unless deliberately using toy numbers for arithmetic.
 - Full Ring 7 audit completed 2026-05-04 against Drift sources. Additional gaps patched into roadmap: keeper fill entry, place-and-take entry, `FillMode`, final fill-price validation, cleanup paths (`should_expire_order`, reduce-only-now-invalid cancellation), flat keeper reward rules, open bid/ask decrease on fill, `OrderActionRecord`, and the strict R7->R8 boundary. Key invariant: do not mark `Order.base_asset_amount_filled` / `Filled` unless the R8-owned position update succeeds, because Drift mutates position before order progress in `fulfill_perp_order_with_amm`.
+- Correction added 2026-05-04: do not mix Drift's simple `calculate_auction_prices` fallback with the placement-time `OrderParams::update_perp_auction_params` / `derive_market_order_auction_params` sanitization path. Teach them as two steps: (1) derive/sanitize params from market/oracle/limit, (2) `get_auction_params` reads final stored boundary and minimum duration.
+- First Ring 7 learning slice locked 2026-05-04: user can explain auction boundary, final gap, duration clamp, elapsed-slot price movement, direction-based tick rounding, fill-price safety, partial fills, `base_asset_amount_filled`, unfilled amount, open bids/asks decrease, `open_orders` count behavior, and event-as-receipt. Current build should start tiny with order-progress helpers, not full AMM/maker/fee logic.
 
 ### Ring 6
 - Build-side Drift-alignment gap found 2026-04-30 before `place_perp_order`: mini-drift initially used `market_index == market_index` and `base_asset_amount == 0` to find/allocate perp position shelves. User correctly spotted the market-index-0 ambiguity and the "flat but used folder" problem. Roadmap updated: Ring 6 now explicitly requires `PerpPosition::is_available()` and `is_for(market_index)` before order placement, matching Drift's invariant that market label + availability state define whether a shelf is real.
@@ -208,7 +223,7 @@
 - OrderRecord (event receipt that copies and announces the stored order)
 - instruction handler vs controller (instruction gathers accounts/time/user key; controller owns state-changing order logic)
 
-- Ring 7 next — start Dutch auction + fill flow. First neuron: an order is only a stored waiting plan until a filler/keeper fills it.
-- Delivery: keep the 2026-05-01 tiny-neuron style. Start with place-vs-fill recap, then one auction idea at a time.
+- Ring 7 next - build Slice 1: order-progress helpers around unfilled amount, partial fill progress, full-fill status/count behavior, and a strict boundary that order progress only moves after position update succeeds.
+- Delivery: keep the tiny-neuron style. One helper contract at a time: plain meaning -> state table -> helper input/output -> Rust syntax -> tests.
 - Forward refs to keep parked: Ring 7 (Dutch auction + fees on fill), Ring 10 (Oracle order type's price source), Ring 23 (maker/taker matching engine).
 - Forward refs still outstanding from earlier rings: Ring 7 (entry vs break-even via fees — hit it in Ring 7), Ring 9 (price impact, sqrt_k, open interest), Ring 10 (oracle mechanics), Ring 11 (bid/ask spread), Ring 14 (funding rate, last_cumulative_funding_rate on PerpPosition), Ring 22 (repeg), Ring 24 (LPs / virtual reserve origination).

@@ -440,13 +440,15 @@ R15 replaces the simple ledger with Drift-shaped `SpotPosition` + vault logic.
 
 #### Ring 7 — *Getting filled* [`learning R7`]
 - **Concept:** Dutch auction, keepers, fill flow, fees-on-fill
+- **Current status (2026-05-04):** study Slice 1 is complete enough to build order-progress helpers. R4/R5 foundation debt is intentionally parked for this small order-progress build slice only; return to it before any full trade demo or M1 close. Build has not started. Start with unfilled amount, partial-fill progress, full-fill status/count behavior, and the invariant that order progress only moves after the R8 position-update boundary succeeds.
 - **Study:**
   - `programs/drift/src/instructions/keeper.rs::handle_fill_perp_order` — outside keeper entry point
   - `programs/drift/src/instructions/user.rs::handle_place_and_take_perp_order` — taker-as-filler entry point
   - `programs/drift/src/state/fill_mode.rs` — `Fill`, `PlaceAndTake`, IOC/success-condition behavior, and how auction price is read during place-and-take
-  - `programs/drift/src/controller/orders.rs::get_auction_params` — placement-time bridge that chooses auction start/end/duration
+  - `programs/drift/src/state/order_params.rs::update_perp_auction_params` — placement-time sanitization step that may derive/sanitize auction params before storage
+  - `programs/drift/src/controller/orders.rs::get_auction_params` — placement-time bridge that reads/sanitizes final auction start/end/duration for the stored Order
   - `programs/drift/src/math/auction.rs` — `calculate_auction_prices` (derive start/end from oracle + limit) and `calculate_auction_price` (current slot price)
-  - `programs/drift/src/state/order_params.rs` — `derive_market_order_auction_params` and `get_auction_duration`
+  - `programs/drift/src/state/order_params.rs` — baseline offset helpers, `derive_market_order_auction_params`, and `get_auction_duration`
   - `programs/drift/src/math/orders.rs` — `standardize_price_i64`, `calculate_fill_price`, `validate_fill_price`, `validate_fill_price_within_price_bands`, `should_expire_order`, and `should_cancel_reduce_only_order`
   - `programs/drift/src/state/perp_market.rs::amm_can_fill_order` — AMM/oracle safety gate before AMM fill
   - `programs/drift/src/math/fulfillment.rs` + `state/fulfillment.rs` — Drift decides whether the fill route is AMM or maker match
@@ -856,7 +858,7 @@ R15 replaces the simple ledger with Drift-shaped `SpotPosition` + vault logic.
 
 ---
 
-## 7 · Pre-Ring Catch-Up (Current State: 2026-05-03)
+## 7 · Pre-Ring Catch-Up (Current State: 2026-05-04)
 
 R1-R3 are pure-learning rings — no build artifact owed.
 
@@ -869,10 +871,13 @@ still tracked separately before the full R7/R8 trading demo:
 | R4 | `math/constants.rs`, `math/safe_math.rs`, `error.rs` typed | unit tests for every checked op (overflow / underflow / boundary) |
 | R5 | `PerpPosition` struct typed | `User` account · quote-collateral spine · `initialize_user` ix · `deposit_test_collateral` ix · anchor test |
 | R6 | `Order`, `OrderType`, `OrderStatus`, `PositionDirection`, `OrderParams`, `User.orders`, position shelf helpers, `place_perp_order`, `OrderRecord`, Anchor instruction wrapper, and focused tests shipped | Future rings activate fill behavior, Trigger/Oracle execution, and deeper margin/risk checks |
+| R7 | Study Slice 1 complete: Dutch auction setup, saved auction fields, fill-price wall, partial-fill progress, position-before-order-progress invariant, open bids/asks decrease, fill event receipt | Build not started. Start with tiny order-progress helpers and tests before AMM route, maker route, fees, keeper rewards, cleanup, and exact event fields |
 
-Hard gate: do not start R7 build until the remaining R4-R5 foundation debt is
-explicitly handled or intentionally parked. R6 now has tests, events, a public
-instruction wrapper, authority constraint, and clippy-clean checks.
+Hard gate status: the remaining R4-R5 foundation debt is intentionally parked
+for the small R7 order-progress build slice only. It is saved for later, not
+ignored. Return to it before any full trade demo or M1 close. R6 now has tests,
+events, a public instruction wrapper, authority constraint, and clippy-clean
+checks.
 
 From R7 onward, every ring is **learning in the morning, building in the
 afternoon**.
@@ -955,7 +960,7 @@ Daily minimum during build catch-up:
 - [ ] R4 · `anchor init` + math primitives + error enum *(structs typed; tests still owed)*
 - [ ] R5 · `PerpPosition` + quote-collateral spine + `initialize_user` *(struct typed; account + ix + test still owed)*
 - [x] R6 · `Order` struct + `place_perp_order` *(Market/Limit storage, unsupported order rejection, reduce-only placement checks, `OrderRecord`, Anchor wrapper, tests, clippy clean)*
-- [ ] R7 · Dutch auction + stub fill + filler reward
+- [ ] R7 · Dutch auction + stub fill + filler reward *(study Slice 1 complete; build Slice 1 next: order-progress helpers)*
 - [ ] R8 · `update_position_and_market` — **🏁 M1**
 - [ ] R9 · Full vAMM + swap_base_asset
 - [ ] R10 · Pyth integration + read-only keeper vs real Drift

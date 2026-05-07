@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spiral Learning Progress</title>
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5c6673;
+      --line: #d9ded7;
+      --line-strong: #aab4ad;
+      --done: #18794e;
+      --done-soft: #e2f3e9;
+      --active: #1f6feb;
+      --active-soft: #e7f0ff;
+      --pending: #8b6f1e;
+      --pending-soft: #fff4c2;
+      --locked: #7b8490;
+      --locked-soft: #eceff2;
+      --parked: #b54708;
+      --parked-soft: #fff0e4;
+      --danger: #b42318;
+      --shadow: 0 16px 42px rgba(23, 32, 42, 0.08);
+      --radius: 8px;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        linear-gradient(180deg, rgba(247, 245, 240, 0.94), rgba(247, 245, 240, 1)),
+        repeating-linear-gradient(90deg, rgba(23, 32, 42, 0.035) 0 1px, transparent 1px 88px);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    .shell {
+      width: min(1480px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.65rem, 2vw, 2.35rem);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .today {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .search {
+      width: min(340px, 100%);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--active);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.14);
+    }
+
+    .segmented {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .segmented button {
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 10px;
+      cursor: pointer;
+      min-width: 54px;
+    }
+
+    .segmented button[aria-pressed="true"] {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 1.1fr) minmax(260px, 0.9fr) minmax(280px, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-panel {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .meter-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .big-number {
+      font-size: clamp(2.4rem, 6vw, 4.6rem);
+      line-height: 0.92;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .big-number span {
+      color: var(--muted);
+      font-size: 0.38em;
+      font-weight: 800;
+    }
+
+    .meter-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .progress-track {
+      height: 12px;
+      background: #e7ebe5;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(23, 32, 42, 0.08);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: var(--progress);
+      background: linear-gradient(90deg, var(--done), var(--active));
+    }
+
+    .stat-line {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .stat {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: #fbfcfa;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.2rem;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .now-panel {
+      padding: 18px;
+    }
+
+    .section-label {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .active-title {
+      margin: 0 0 8px;
+      font-size: 1.25rem;
+      line-height: 1.2;
+    }
+
+    .active-copy {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 0.94rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 6px 9px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--ink);
+      background: #fbfcfa;
+      white-space: nowrap;
+    }
+
+    .chip.done {
+      border-color: rgba(24, 121, 78, 0.35);
+      background: var(--done-soft);
+      color: var(--done);
+    }
+
+    .chip.active {
+      border-color: rgba(31, 111, 235, 0.32);
+      background: var(--active-soft);
+      color: var(--active);
+    }
+
+    .chip.parked {
+      border-color: rgba(181, 71, 8, 0.28);
+      background: var(--parked-soft);
+      color: var(--parked);
+    }
+
+    .current-stack {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .next-item {
+      border-left: 4px solid var(--active);
+      background: #f8fbff;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 9px 10px;
+      color: var(--ink);
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
+    .map-panel {
+      padding: 16px;
+    }
+
+    .phase-strip {
+      display: grid;
+      gap: 9px;
+    }
+
+    .phase-band {
+      display: grid;
+      grid-template-columns: 104px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .phase-name {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+
+    .phase-cells {
+      display: grid;
+      grid-template-columns: repeat(var(--count), minmax(10px, 1fr));
+      gap: 4px;
+      min-height: 26px;
+    }
+
+    .phase-cell {
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--locked-soft);
+      min-width: 0;
+      color: var(--locked);
+      display: grid;
+      place-items: center;
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    .phase-cell.done {
+      background: var(--done-soft);
+      border-color: rgba(24, 121, 78, 0.28);
+      color: var(--done);
+    }
+
+    .phase-cell.active {
+      background: var(--active);
+      border-color: var(--active);
+      color: #fff;
+    }
+
+    .phase-cell.pending {
+      background: var(--pending-soft);
+      border-color: rgba(139, 111, 30, 0.25);
+      color: var(--pending);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .rings-panel {
+      padding: 16px;
+    }
+
+    .rings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .rings-header h2,
+    .side-panel h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      line-height: 1.2;
+    }
+
+    .rings-count {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .ring-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .ring-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfa;
+      padding: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .ring-card:hover,
+    .ring-card:focus-visible {
+      transform: translateY(-1px);
+      border-color: var(--active);
+      box-shadow: 0 10px 24px rgba(23, 32, 42, 0.08);
+      outline: none;
+    }
+
+    .ring-card.selected {
+      border-color: var(--active);
+      box-shadow: inset 0 0 0 2px rgba(31, 111, 235, 0.14);
+    }
+
+    .ring-card.done {
+      background: linear-gradient(180deg, #fbfffc, var(--done-soft));
+    }
+
+    .ring-card.active {
+      background: linear-gradient(180deg, #ffffff, var(--active-soft));
+    }
+
+    .ring-card.pending {
+      background: #fffdfa;
+    }
+
+    .ring-card.locked {
+      background: #f5f6f7;
+      color: #4f5863;
+    }
+
+    .ring-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+      margin-bottom: 9px;
+    }
+
+    .ring-num {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      font-size: 0.88rem;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .ring-card.done .ring-num {
+      border-color: rgba(24, 121, 78, 0.35);
+      color: var(--done);
+    }
+
+    .ring-card.active .ring-num {
+      background: var(--active);
+      border-color: var(--active);
+      color: #fff;
+    }
+
+    .status-pill {
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-size: 0.68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: #fff;
+    }
+
+    .status-pill.done {
+      color: var(--done);
+      background: var(--done-soft);
+      border-color: rgba(24, 121, 78, 0.28);
+    }
+
+    .status-pill.active {
+      color: var(--active);
+      background: var(--active-soft);
+      border-color: rgba(31, 111, 235, 0.28);
+    }
+
+    .status-pill.pending {
+      color: var(--pending);
+      background: var(--pending-soft);
+      border-color: rgba(139, 111, 30, 0.25);
+    }
+
+    .status-pill.locked {
+      color: var(--locked);
+      background: var(--locked-soft);
+    }
+
+    .ring-card h3 {
+      margin: 0 0 7px;
+      font-size: 0.98rem;
+      line-height: 1.25;
+    }
+
+    .ring-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .mini-meter {
+      margin-top: 11px;
+      height: 7px;
+      border-radius: 999px;
+      background: #e9ede8;
+      overflow: hidden;
+    }
+
+    .mini-meter span {
+      display: block;
+      height: 100%;
+      width: var(--ring-progress);
+      background: var(--done);
+    }
+
+    .ring-card.active .mini-meter span {
+      background: var(--active);
+    }
+
+    .side-panel {
+      padding: 16px;
+      position: sticky;
+      top: 12px;
+    }
+
+    .detail-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .detail-title h2 {
+      max-width: 78%;
+    }
+
+    .detail-copy {
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 0 0 14px;
+      font-size: 0.94rem;
+    }
+
+    .detail-section {
+      border-top: 1px solid var(--line);
+      padding-top: 13px;
+      margin-top: 13px;
+    }
+
+    .detail-section h3 {
+      margin: 0 0 9px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .task-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .task {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 9px;
+      align-items: start;
+      border: 1px solid var(--line);
+      background: #fbfcfa;
+      border-radius: var(--radius);
+      padding: 9px;
+    }
+
+    .task-mark {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 900;
+      margin-top: 1px;
+    }
+
+    .task.done .task-mark {
+      border-color: rgba(24, 121, 78, 0.35);
+      background: var(--done-soft);
+      color: var(--done);
+    }
+
+    .task.active .task-mark {
+      border-color: var(--active);
+      background: var(--active);
+      color: #fff;
+    }
+
+    .task.parked .task-mark {
+      border-color: rgba(181, 71, 8, 0.3);
+      background: var(--parked-soft);
+      color: var(--parked);
+    }
+
+    .task strong {
+      display: block;
+      font-size: 0.9rem;
+      line-height: 1.35;
+      margin-bottom: 3px;
+    }
+
+    .task span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .source-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .source-list li {
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 9px;
+      background: #fbfcfa;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.74rem;
+      overflow-wrap: anywhere;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1100px) {
+      .summary-grid,
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .side-panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .shell {
+        width: min(100vw - 20px, 1480px);
+        padding-top: 14px;
+      }
+
+      .topbar {
+        display: grid;
+      }
+
+      .controls {
+        justify-content: stretch;
+      }
+
+      .search,
+      .segmented {
+        width: 100%;
+      }
+
+      .segmented {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .segmented button {
+        min-width: 0;
+        padding: 8px 4px;
+      }
+
+      .stat-line {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .phase-band {
+        grid-template-columns: 1fr;
+      }
+
+      .ring-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-title h2 {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="title-block">
+        <p class="eyebrow">Spiral Learning System</p>
+        <h1>Drift Protocol Progress</h1>
+        <p class="today" id="todayLine"></p>
+      </div>
+      <div class="controls" aria-label="Progress filters">
+        <input class="search" id="searchInput" type="search" placeholder="Search rings, chunks, files">
+        <div class="segmented" id="filterButtons" role="group" aria-label="Filter rings">
+          <button type="button" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" data-filter="done" aria-pressed="false">Done</button>
+          <button type="button" data-filter="active" aria-pressed="false">Active</button>
+          <button type="button" data-filter="locked" aria-pressed="false">Locked</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="summary-grid" aria-label="Current progress summary">
+      <article class="panel hero-panel">
+        <div class="meter-row">
+          <div class="big-number" id="ringNumber"></div>
+          <div class="meter-label" id="meterLabel"></div>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" id="overallMeter"></div>
+        </div>
+        <div class="stat-line" id="statsLine"></div>
+      </article>
+
+      <article class="panel now-panel">
+        <p class="section-label">Current Position</p>
+        <h2 class="active-title" id="activeTitle"></h2>
+        <p class="active-copy" id="activeCopy"></p>
+        <div class="chips" id="activeChips"></div>
+      </article>
+
+      <article class="panel now-panel">
+        <p class="section-label">Next Neuron</p>
+        <div class="current-stack" id="nextStack"></div>
+      </article>
+    </section>
+
+    <section class="panel map-panel" aria-label="Phase map">
+      <p class="section-label">Phase Map</p>
+      <div class="phase-strip" id="phaseStrip"></div>
+    </section>
+
+    <section class="main-grid" aria-label="Ring details">
+      <section class="panel rings-panel">
+        <div class="rings-header">
+          <h2>Rings</h2>
+          <span class="rings-count" id="ringsCount"></span>
+        </div>
+        <div class="ring-grid" id="ringGrid"></div>
+      </section>
+
+      <aside class="panel side-panel" aria-label="Selected ring detail">
+        <div id="detailPanel"></div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const progressData = {
+      updatedAt: "2026-05-07",
+      topic: "Drift Protocol v2 - Perpetual Futures Engine",
+      currentRing: 7,
+      totalRings: 26,
+      activeConcept: "Ring 7 - FillMode::get_limit_price",
+      activeStatus: "Study tiny chunk: auction percentage inside PlaceAndTake(bool, u8)",
+      nextNeurons: [
+        "Understand PlaceAndTake's u8 as an auction-duration percentage.",
+        "Read Drift's get_limit_price branch line by line.",
+        "Only after study lands, decide whether to build the helper."
+      ],
+      parked: [
+        "No fake fill wrapper.",
+        "R8 owns real position mutation.",
+        "R9 owns real AMM reserve swap.",
+        "R13 owns full fee model.",
+        "R23 owns maker matching."
+      ],
+      phases: [
+        {
+          id: "phase-1",
+          name: "World",
+          rings: [
+            { id: 1, title: "Trading, futures, perpetual, exchange", status: "done", progress: 100, summary: "The world of bets, prices, and the exchange." },
+            { id: 2, title: "Long, short, PnL, collateral, margin, leverage", status: "done", progress: 100, summary: "Direction, profit/loss, and why collateral keeps traders alive." }
+          ]
+        },
+        {
+          id: "phase-2",
+          name: "Engine",
+          rings: [
+            { id: 3, title: "AMM, constant product, price from reserves, peg", status: "done", progress: 100, summary: "Robot counterparty, virtual reserves, and mark price." },
+            { id: 4, title: "Solana accounts, four pillars, precision, safe math", status: "done", progress: 100, summary: "Where state lives and why money math must be checked." }
+          ]
+        },
+        {
+          id: "phase-3",
+          name: "Trade",
+          rings: [
+            { id: 5, title: "PerpPosition struct, base/quote, direction", status: "done", progress: 100, summary: "The stored record of a trader's bet." },
+            {
+              id: 6,
+              title: "Order struct, types, lifecycle, reduce-only, post-only",
+              status: "done",
+              progress: 100,
+              summary: "A waiting request to trade, stored on the User account.",
+              chunks: [
+                { label: "Order vs PerpPosition sign split", status: "done" },
+                { label: "Five OrderType flavors", status: "done" },
+                { label: "OrderParams vs Order", status: "done" },
+                { label: "OrderStatus lifecycle", status: "done" },
+                { label: "Reduce-only, post-only, IOC", status: "done" }
+              ]
+            },
+            {
+              id: 7,
+              title: "Dutch auctions, keepers, fill flow, fees-on-fill",
+              status: "active",
+              progress: 62,
+              summary: "How waiting orders get filled, priced, recorded, and safely cleaned up.",
+              current: "Study FillMode::get_limit_price in tiny chunks.",
+              studyFiles: [
+                "programs/drift/src/state/fill_mode.rs",
+                "programs/drift/src/instructions/user.rs::handle_place_and_take_perp_order",
+                "programs/drift/src/state/order_params.rs::parse_optional_params",
+                "programs/drift/src/math/auction.rs::calculate_auction_price",
+                "programs/drift/src/state/user.rs::Order::get_limit_price"
+              ],
+              chunks: [
+                { label: "Place vs fill recap", status: "done", note: "Placing stores; filling changes real position state." },
+                { label: "Filler/keeper model", status: "done", note: "Caller wakes the program; program checks safety." },
+                { label: "Dutch auction setup", status: "done", note: "Oracle -> start/end boundary -> duration." },
+                { label: "Auction price at fill time", status: "done", note: "Elapsed slots, clamp, direction move, tick rounding." },
+                { label: "Limit/fill safety", status: "done", note: "Long <= wall, Short >= wall." },
+                { label: "Partial fill storage", status: "done", note: "Filled amount tracks progress." },
+                { label: "Drift-shaped fill update order", status: "done", note: "Position succeeds before order progress moves." },
+                { label: "Event mental model", status: "done", note: "Event is a receipt after state changes." },
+                { label: "Build Slice 1", status: "active", note: "Order progress, receipt, cleanup, FillMode basics shipped; get_limit_price pending." },
+                { label: "Study Slice 2", status: "pending", note: "AMM route, maker route, fees, keeper reward, cleanup paths." }
+              ],
+              build: [
+                { label: "Order::get_base_asset_amount_unfilled", status: "done" },
+                { label: "controller/orders.rs::update_order_after_fill", status: "done" },
+                { label: "controller/position.rs::decrease_open_bids_and_asks", status: "done" },
+                { label: "User::decrement_open_orders", status: "done" },
+                { label: "OrderActionRecord receipt builder", status: "done" },
+                { label: "decrement_open_orders_after_full_fill", status: "done" },
+                { label: "FillMode basics: is_liquidation / is_ioc", status: "done" },
+                { label: "FillMode::get_limit_price", status: "active" },
+                { label: "Emit inside real fill path", status: "parked" },
+                { label: "Real fill orchestration", status: "parked" }
+              ]
+            },
+            { id: 8, title: "Position updates: open, increase, decrease, close", status: "locked", progress: 0, summary: "The real position mutation boundary after fills." }
+          ]
+        },
+        {
+          id: "phase-4",
+          name: "Pricing",
+          rings: [
+            { id: 9, title: "AMM internals: reserves, sqrt_k, exposure, OI, bounds", status: "locked", progress: 0, summary: "The robot market maker's internal accounting." },
+            { id: 10, title: "Oracles, price feeds, TWAP, strict pricing", status: "locked", progress: 0, summary: "External truth and safety checks." },
+            { id: 11, title: "Spreads: bid/ask and asymmetry", status: "locked", progress: 0, summary: "Why the AMM quotes two prices." },
+            { id: 12, title: "Living spreads: inventory, volatility, revenue retreat", status: "locked", progress: 0, summary: "Spreads react to market stress." }
+          ]
+        },
+        {
+          id: "phase-5",
+          name: "Costs",
+          rings: [
+            { id: 13, title: "Fee flow, accumulation, pools", status: "locked", progress: 0, summary: "Where fill fees go." },
+            { id: 14, title: "Funding rate, TWAP, asymmetry, capping", status: "locked", progress: 0, summary: "Ongoing payments that pull mark toward oracle." }
+          ]
+        },
+        {
+          id: "phase-6",
+          name: "Risk",
+          rings: [
+            { id: 15, title: "Spot as collateral", status: "locked", progress: 0, summary: "Where deposited collateral lives." },
+            { id: 16, title: "PnL calculation", status: "locked", progress: 0, summary: "Exit value minus entry value." },
+            { id: 17, title: "Per-position margin", status: "locked", progress: 0, summary: "How much collateral one position needs." },
+            { id: 18, title: "Portfolio margin", status: "locked", progress: 0, summary: "Adding risk across all positions." },
+            { id: 19, title: "PnL settlement", status: "locked", progress: 0, summary: "Turning unrealized PnL into collateral movement." },
+            { id: 20, title: "Liquidation", status: "locked", progress: 0, summary: "Forced closure when maintenance fails." },
+            { id: 21, title: "Bankruptcy, social loss, insurance fund", status: "locked", progress: 0, summary: "What happens when losses leave a hole." }
+          ]
+        },
+        {
+          id: "phase-7",
+          name: "AMM Health",
+          rings: [
+            { id: 22, title: "Repeg, K updates, AMM JIT", status: "locked", progress: 0, summary: "Keeping the AMM healthy." },
+            { id: 23, title: "Matching engine, fulfillment methods, crossing", status: "locked", progress: 0, summary: "When users match each other directly." }
+          ]
+        },
+        {
+          id: "phase-8",
+          name: "Advanced",
+          rings: [
+            { id: 24, title: "LP system", status: "locked", progress: 0, summary: "Users providing AMM liquidity." },
+            { id: 25, title: "Market lifecycle", status: "locked", progress: 0, summary: "Launch, pause, expiry, delisting." },
+            { id: 26, title: "Special modes and infrastructure", status: "locked", progress: 0, summary: "High leverage, isolated, prediction, guard rails, events, DEX." }
+          ]
+        }
+      ]
+    };
+
+    const statusText = {
+      done: "Done",
+      active: "Active",
+      pending: "Pending",
+      locked: "Locked",
+      parked: "Parked"
+    };
+
+    const marks = {
+      done: "OK",
+      active: "NOW",
+      pending: "-",
+      locked: "-",
+      parked: "P"
+    };
+
+    const state = {
+      filter: "all",
+      search: "",
+      selectedRing: progressData.currentRing
+    };
+
+    const allRings = () => progressData.phases.flatMap((phase) =>
+      phase.rings.map((ring) => ({ ...ring, phase: phase.name }))
+    );
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getStats() {
+      const rings = allRings();
+      return {
+        done: rings.filter((ring) => ring.status === "done").length,
+        active: rings.filter((ring) => ring.status === "active").length,
+        locked: rings.filter((ring) => ring.status === "locked").length,
+        pending: rings.filter((ring) => ring.status === "pending").length,
+        total: rings.length
+      };
+    }
+
+    function renderSummary() {
+      const stats = getStats();
+      const completedPercent = Math.round((stats.done / stats.total) * 100);
+      const activeRing = allRings().find((ring) => ring.id === progressData.currentRing);
+      const overallMeter = document.getElementById("overallMeter");
+
+      document.getElementById("todayLine").textContent =
+        `${progressData.topic} - updated ${progressData.updatedAt}`;
+      document.getElementById("ringNumber").innerHTML =
+        `${progressData.currentRing}<span>/${progressData.totalRings}</span>`;
+      document.getElementById("meterLabel").textContent =
+        `${completedPercent}% of rings closed`;
+      overallMeter.style.setProperty("--progress", `${completedPercent}%`);
+      document.getElementById("statsLine").innerHTML = [
+        ["Closed", stats.done],
+        ["Active", stats.active],
+        ["Locked", stats.locked],
+        ["Total", stats.total]
+      ].map(([label, value]) => `
+        <div class="stat">
+          <strong>${value}</strong>
+          <span>${label}</span>
+        </div>
+      `).join("");
+
+      document.getElementById("activeTitle").textContent = progressData.activeConcept;
+      document.getElementById("activeCopy").textContent = progressData.activeStatus;
+      document.getElementById("activeChips").innerHTML = [
+        `<span class="chip active">Ring ${progressData.currentRing}</span>`,
+        `<span class="chip done">Rings 1-6 closed</span>`,
+        `<span class="chip parked">No fake flow</span>`
+      ].join("");
+
+      document.getElementById("nextStack").innerHTML = progressData.nextNeurons
+        .map((item) => `<div class="next-item">${escapeHtml(item)}</div>`)
+        .join("");
+
+      if (activeRing) {
+        document.title = `Ring ${activeRing.id} - ${activeRing.title}`;
+      }
+    }
+
+    function renderPhaseMap() {
+      document.getElementById("phaseStrip").innerHTML = progressData.phases.map((phase) => `
+        <div class="phase-band">
+          <div class="phase-name">${escapeHtml(phase.name)}</div>
+          <div class="phase-cells" style="--count: ${phase.rings.length}">
+            ${phase.rings.map((ring) => `
+              <div class="phase-cell ${ring.status}" title="Ring ${ring.id}: ${escapeHtml(ring.title)}">${ring.id}</div>
+            `).join("")}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function ringMatches(ring) {
+      const matchesFilter =
+        state.filter === "all" ||
+        ring.status === state.filter ||
+        (state.filter === "locked" && (ring.status === "locked" || ring.status === "pending"));
+
+      const haystack = [
+        ring.id,
+        ring.title,
+        ring.summary,
+        ring.phase,
+        ring.current,
+        ...(ring.studyFiles || []),
+        ...(ring.chunks || []).map((chunk) => `${chunk.label} ${chunk.note || ""}`),
+        ...(ring.build || []).map((item) => item.label)
+      ].join(" ").toLowerCase();
+
+      return matchesFilter && haystack.includes(state.search.toLowerCase());
+    }
+
+    function renderRings() {
+      const rings = allRings().filter(ringMatches);
+      document.getElementById("ringsCount").textContent =
+        `${rings.length} shown`;
+
+      document.getElementById("ringGrid").innerHTML = rings.map((ring) => `
+        <button
+          type="button"
+          class="ring-card ${ring.status} ${ring.id === state.selectedRing ? "selected" : ""}"
+          style="--ring-progress: ${ring.progress || 0}%"
+          data-ring-id="${ring.id}"
+          aria-label="Open Ring ${ring.id}"
+        >
+          <div class="ring-top">
+            <span class="ring-num">${ring.id}</span>
+            <span class="status-pill ${ring.status}">${statusText[ring.status] || ring.status}</span>
+          </div>
+          <h3>${escapeHtml(ring.title)}</h3>
+          <p>${escapeHtml(ring.summary)}</p>
+          <div class="mini-meter" aria-hidden="true"><span></span></div>
+        </button>
+      `).join("");
+
+      document.querySelectorAll(".ring-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          state.selectedRing = Number(card.dataset.ringId);
+          renderRings();
+          renderDetail();
+        });
+      });
+    }
+
+    function renderTaskList(items = []) {
+      if (!items.length) {
+        return `<p class="detail-copy">No chunk detail recorded yet.</p>`;
+      }
+
+      return `<ul class="task-list">
+        ${items.map((item) => `
+          <li class="task ${item.status}">
+            <span class="task-mark">${marks[item.status] || "-"}</span>
+            <span>
+              <strong>${escapeHtml(item.label)}</strong>
+              ${item.note ? `<span>${escapeHtml(item.note)}</span>` : ""}
+            </span>
+          </li>
+        `).join("")}
+      </ul>`;
+    }
+
+    function renderDetail() {
+      const ring = allRings().find((item) => item.id === state.selectedRing) ||
+        allRings().find((item) => item.id === progressData.currentRing);
+
+      document.getElementById("detailPanel").innerHTML = `
+        <div class="detail-title">
+          <h2>Ring ${ring.id}: ${escapeHtml(ring.title)}</h2>
+          <span class="status-pill ${ring.status}">${statusText[ring.status] || ring.status}</span>
+        </div>
+        <p class="detail-copy">${escapeHtml(ring.summary)}</p>
+        ${ring.current ? `<div class="next-item">${escapeHtml(ring.current)}</div>` : ""}
+
+        <div class="detail-section">
+          <h3>Chunks</h3>
+          ${renderTaskList(ring.chunks)}
+        </div>
+
+        <div class="detail-section">
+          <h3>Build</h3>
+          ${renderTaskList(ring.build)}
+        </div>
+
+        <div class="detail-section">
+          <h3>Study Files</h3>
+          ${ring.studyFiles && ring.studyFiles.length ? `
+            <ul class="source-list">
+              ${ring.studyFiles.map((file) => `<li>${escapeHtml(file)}</li>`).join("")}
+            </ul>
+          ` : `<p class="detail-copy">Study files will appear here when this ring opens.</p>`}
+        </div>
+
+        <div class="detail-section">
+          <h3>Parked Boundaries</h3>
+          <ul class="task-list">
+            ${progressData.parked.map((item) => `
+              <li class="task parked">
+                <span class="task-mark">P</span>
+                <span><strong>${escapeHtml(item)}</strong></span>
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    function bindControls() {
+      document.getElementById("searchInput").addEventListener("input", (event) => {
+        state.search = event.target.value;
+        renderRings();
+      });
+
+      document.querySelectorAll("#filterButtons button").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.filter = button.dataset.filter;
+          document.querySelectorAll("#filterButtons button").forEach((item) => {
+            item.setAttribute("aria-pressed", String(item === button));
+          });
+          renderRings();
+        });
+      });
+    }
+
+    renderSummary();
+    renderPhaseMap();
+    renderRings();
+    renderDetail();
+    bindControls();
+  </script>
+</body>
+</html>

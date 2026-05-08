@@ -800,16 +800,16 @@
 
   <script>
     const progressData = {
-      updatedAt: "2026-05-07",
+      updatedAt: "2026-05-08",
       topic: "Drift Protocol v2 - Perpetual Futures Engine",
       currentRing: 7,
       totalRings: 26,
-      activeConcept: "Ring 7 - FillMode::get_limit_price",
-      activeStatus: "Study tiny chunk: auction percentage inside PlaceAndTake(bool, u8)",
+      activeConcept: "Ring 7 - Study Slice 2 route selection",
+      activeStatus: "Route-selection neurons locked: crossing, maker price, maker-vs-AMM ordering, AMM(Some), AMM(None), empty route, and one Alice pipeline.",
       nextNeurons: [
-        "Understand PlaceAndTake's u8 as an auction-duration percentage.",
-        "Read Drift's get_limit_price branch line by line.",
-        "Only after study lands, decide whether to build the helper."
+        "Bridge the Alice route story back to determine_perp_fulfillment_methods.",
+        "Study fees, keeper reward, cleanup paths, and exact OrderActionRecord fields one tiny slice at a time.",
+        "Keep R8 position mutation, R9 reserve swap, R13 fee pools, and R23 full matching parked."
       ],
       parked: [
         "No fake fill wrapper.",
@@ -858,15 +858,17 @@
               id: 7,
               title: "Dutch auctions, keepers, fill flow, fees-on-fill",
               status: "active",
-              progress: 62,
+              progress: 74,
               summary: "How waiting orders get filled, priced, recorded, and safely cleaned up.",
-              current: "Study FillMode::get_limit_price in tiny chunks.",
+              current: "Study Slice 2 route selection locked; next bridge the story back to Drift source.",
               studyFiles: [
                 "programs/drift/src/state/fill_mode.rs",
                 "programs/drift/src/instructions/user.rs::handle_place_and_take_perp_order",
                 "programs/drift/src/state/order_params.rs::parse_optional_params",
                 "programs/drift/src/math/auction.rs::calculate_auction_price",
-                "programs/drift/src/state/user.rs::Order::get_limit_price"
+                "programs/drift/src/state/user.rs::Order::get_limit_price",
+                "programs/drift/src/math/fulfillment.rs::determine_perp_fulfillment_methods",
+                "programs/drift/src/state/fulfillment.rs::PerpFulfillmentMethod"
               ],
               chunks: [
                 { label: "Place vs fill recap", status: "done", note: "Placing stores; filling changes real position state." },
@@ -877,8 +879,9 @@
                 { label: "Partial fill storage", status: "done", note: "Filled amount tracks progress." },
                 { label: "Drift-shaped fill update order", status: "done", note: "Position succeeds before order progress moves." },
                 { label: "Event mental model", status: "done", note: "Event is a receipt after state changes." },
-                { label: "Build Slice 1", status: "active", note: "Order progress, receipt, cleanup, FillMode basics shipped; get_limit_price pending." },
-                { label: "Study Slice 2", status: "pending", note: "AMM route, maker route, fees, keeper reward, cleanup paths." }
+                { label: "Build Slice 1", status: "active", note: "Order progress, receipt, cleanup, FillMode basics, auction helper, and get_limit_price shipped; real flow still parked." },
+                { label: "Study Slice 2 route selection", status: "done", note: "Crossing, maker price, maker-vs-AMM ordering, AMM(Some), AMM(None), empty route, Alice pipeline." },
+                { label: "Study Slice 2 remaining", status: "active", note: "Source bridge, fees, keeper reward, cleanup paths, exact event fields." }
               ],
               build: [
                 { label: "Order::get_base_asset_amount_unfilled", status: "done" },
@@ -888,7 +891,10 @@
                 { label: "OrderActionRecord receipt builder", status: "done" },
                 { label: "decrement_open_orders_after_full_fill", status: "done" },
                 { label: "FillMode basics: is_liquidation / is_ioc", status: "done" },
-                { label: "FillMode::get_limit_price", status: "active" },
+                { label: "Order.slot + has_auction", status: "done" },
+                { label: "math::auction::calculate_auction_price", status: "done" },
+                { label: "Order::get_limit_price fixed-wall fallback", status: "done" },
+                { label: "FillMode::get_limit_price", status: "done" },
                 { label: "Emit inside real fill path", status: "parked" },
                 { label: "Real fill orchestration", status: "parked" }
               ]

@@ -196,6 +196,19 @@ When the user asks a side/random question during a teaching chain:
 
 Only switch topics if the user clearly says they want to switch.
 
+### Question Parking Guard
+
+When the user asks any question during a ring or build slice:
+
+1. First decide whether the answer belongs to the current ring/slice.
+2. If it belongs now, answer it in the current tiny-chunk style.
+3. If it belongs to a later ring/slice, do not answer deeply now.
+4. State exactly where it belongs: "This belongs to Ring [X] / Slice [Y]."
+5. Update `learning/learning_state.md` with the parked question and the ring/slice where it should be answered.
+6. When that ring/slice opens, explicitly return to the parked question and answer it then.
+
+This rule exists so side questions become saved neurons, not lost tangents.
+
 ### All Rings
 
 - Each ring adds ONE small layer
@@ -382,6 +395,18 @@ where only the program knows the formula?"
 
 ```
 
+### One-Scene Mental Model
+
+When a concept has multiple moving parts, teach it as one small scene before naming code details.
+
+Use this sequence:
+
+1. One scene: name the actors and their exact numbers.
+2. One rule: state the single rule this scene teaches.
+3. One check: ask one short question to confirm the rule landed.
+
+Do not mix several examples, labels, or changing prices in the same explanation. Keep the actors stable until the user says the scene is clear. This method worked well for Ring 7 route selection (`Alice` + `AMM` + `Carol`, moving AMM price vs fixed maker price).
+
 ### Response Format During Teaching
 
 - Short paragraphs (2-4 sentences max)
@@ -398,8 +423,8 @@ where only the program knows the formula?"
 ### User Asks Question Beyond Current Ring
 
 ```
-"Good question — we'll cover that in Ring [X]. For now, just know that [tiny teaser].
-Let's not jump ahead though. Does the current concept make sense?"
+"Good question — this belongs to Ring [X] / Slice [Y], so I'm parking it in learning_state.md.
+We'll answer it when that ring/slice opens. For now, the tiny current-slice answer is: [tiny teaser]."
 
 ```
 

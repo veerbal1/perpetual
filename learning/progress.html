@@ -800,21 +800,21 @@
 
   <script>
     const progressData = {
-      updatedAt: "2026-05-10",
+      updatedAt: "2026-05-14",
       topic: "Drift Protocol v2 - Perpetual Futures Engine",
-      currentRing: 7,
+      currentRing: 8,
       totalRings: 26,
-      activeConcept: "Ring 7 - route helper build",
-      activeStatus: "Route-label and crossing-gate helpers shipped: PerpFulfillmentMethod + do_orders_cross. Full route planner remains parked until its Drift dependencies are ready.",
+      activeConcept: "Ring 8 - position mutation boundary",
+      activeStatus: "Ring 7 helper shell is closed: fmt/check/96 tests/clippy clean. Next step is connecting matched fill numbers into PerpPosition state changes without inventing a fake fill wrapper.",
       nextNeurons: [
-        "Keep route selection connected to the price wall from FillMode::get_limit_price.",
-        "Continue exact Drift helper slices only; no invented fill wrapper.",
-        "Keep R8 position mutation, R9 reserve swap, R13 fee pools, and R23 full matching parked."
+        "Use Ring 7's (base_filled, quote_filled) output as the input to Ring 8 position math.",
+        "Keep the order-progress boundary strict: position update must succeed before order filled state moves.",
+        "Keep R9 reserve swap, R10 oracle internals, R13 fee pools, and R23 full matching parked."
       ],
       parked: [
         "No fake fill wrapper.",
-        "R8 owns real position mutation.",
         "R9 owns real AMM reserve swap.",
+        "R10 owns oracle/TWAP internals.",
         "R13 owns full fee model.",
         "R23 owns maker matching."
       ],
@@ -857,10 +857,10 @@
             {
               id: 7,
               title: "Dutch auctions, keepers, fill flow, fees-on-fill",
-              status: "active",
-              progress: 78,
+              status: "done",
+              progress: 100,
               summary: "How waiting orders get filled, priced, recorded, and safely cleaned up.",
-              current: "Route-label and crossing-gate helpers shipped; full planner still parked.",
+              current: "Closed as Drift-shaped helper shell; real position mutation opens in Ring 8.",
               studyFiles: [
                 "programs/drift/src/state/fill_mode.rs",
                 "programs/drift/src/instructions/user.rs::handle_place_and_take_perp_order",
@@ -869,7 +869,8 @@
                 "programs/drift/src/state/user.rs::Order::get_limit_price",
                 "programs/drift/src/math/fulfillment.rs::determine_perp_fulfillment_methods",
                 "programs/drift/src/state/fulfillment.rs::PerpFulfillmentMethod",
-                "programs/drift/src/math/matching.rs::do_orders_cross"
+                "programs/drift/src/math/matching.rs::do_orders_cross",
+                "programs/drift/src/math/matching.rs::is_maker_for_taker"
               ],
               chunks: [
                 { label: "Place vs fill recap", status: "done", note: "Placing stores; filling changes real position state." },
@@ -880,9 +881,13 @@
                 { label: "Partial fill storage", status: "done", note: "Filled amount tracks progress." },
                 { label: "Drift-shaped fill update order", status: "done", note: "Position succeeds before order progress moves." },
                 { label: "Event mental model", status: "done", note: "Event is a receipt after state changes." },
-                { label: "Build Slice 1", status: "active", note: "Order progress, receipt, cleanup, FillMode, auction, limit-price, route-label, and crossing helpers shipped; real flow still parked." },
-                { label: "Study Slice 2 route selection", status: "done", note: "Crossing, maker price, maker-vs-AMM ordering, AMM(Some), AMM(None), empty route, Alice pipeline, event-field tour." },
-                { label: "Route helper build", status: "done", note: "PerpFulfillmentMethod + do_orders_cross with 60-test verification." }
+                { label: "Build Slice 1", status: "done", note: "Order progress, receipt, cleanup, FillMode, auction, limit-price, route-label, crossing, role-gate, matched-fill, expiry, reduce-only cleanup, and reward gate shipped." },
+                { label: "Study Slice 2 route selection", status: "done", note: "Crossing, maker price, maker-vs-AMM ordering, AMM(Some), AMM(None), empty route, Alice pipeline, event-field tour, role-gate story." },
+                { label: "Route helper build", status: "done", note: "PerpFulfillmentMethod + do_orders_cross with 60-test verification." },
+                { label: "Maker role-gate build", status: "done", note: "Order readiness helpers + is_maker_for_taker with 80-test verification." },
+                { label: "Matched fill math", status: "done", note: "Shared quote bill + smaller maker/taker base amount." },
+                { label: "Cleanup/reward helpers", status: "done", note: "Expiry, reduce-only invalidation via step_size, and no-self-reward gate." },
+                { label: "Final verification", status: "done", note: "fmt, check, 96 tests, clippy clean." }
               ],
               build: [
                 { label: "Order::get_base_asset_amount_unfilled", status: "done" },
@@ -898,11 +903,34 @@
                 { label: "FillMode::get_limit_price", status: "done" },
                 { label: "PerpFulfillmentMethod route labels", status: "done" },
                 { label: "math::matching::do_orders_cross", status: "done" },
+                { label: "math::matching::are_orders_same_market_but_different_sides", status: "done" },
+                { label: "Order readiness helpers", status: "done" },
+                { label: "math::matching::is_maker_for_taker", status: "done" },
+                { label: "math::orders::calculate_quote_asset_amount_for_maker_order", status: "done" },
+                { label: "math::matching::calculate_fill_for_matched_orders", status: "done" },
+                { label: "math::orders::should_expire_order", status: "done" },
+                { label: "math::orders::should_cancel_reduce_only_order", status: "done" },
+                { label: "controller/orders.rs::should_reward_keeper", status: "done" },
                 { label: "Emit inside real fill path", status: "parked" },
                 { label: "Real fill orchestration", status: "parked" }
               ]
             },
-            { id: 8, title: "Position updates: open, increase, decrease, close", status: "locked", progress: 0, summary: "The real position mutation boundary after fills." }
+            {
+              id: 8,
+              title: "Position updates: open, increase, decrease, close",
+              status: "active",
+              progress: 0,
+              summary: "The real position mutation boundary after fills.",
+              current: "Ready to open: convert Ring 7 fill numbers into PerpPosition delta.",
+              chunks: [
+                { label: "Position delta scene", status: "active", note: "Base and quote move in opposite signs." },
+                { label: "Open/increase/decrease/close/flip", status: "locked", note: "One case at a time." }
+              ],
+              build: [
+                { label: "math/position.rs::calculate_position_delta", status: "active" },
+                { label: "controller position update boundary", status: "locked" }
+              ]
+            }
           ]
         },
         {

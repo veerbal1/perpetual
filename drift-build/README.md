@@ -172,6 +172,13 @@ Before opening R8, run two one-hour tests and record the band in the roadmap:
 - **TypeScript/Solana:** write a Node script that connects to devnet, fetches a Pyth SOL/USD price account, decodes price + confidence, and prints them. No tutorials or copy-paste from existing project scripts.
 - **React/Next.js:** scaffold a page with wallet connect and display the connected wallet's SOL balance. No tutorials.
 
+**Result locked 2026-05-14: Band 1.** Track B shipped as
+`mini-drift/scripts/pyth-sol-usd.ts`, a devnet Pyth SOL/USD readout that prints
+price, confidence, feed id, verification level, context slot, posted slot, and
+publish times. Track C shipped as `mini-drift/app/index.html`, a tiny browser
+wallet readout that connects a Solana wallet on devnet and displays public key
+plus SOL balance. Keep Track B/C as planned.
+
 The result changes the roadmap:
 - **Band 1:** both ship cleanly in under an hour → keep Track B/C as planned.
 - **Band 2:** ships in 2-3 hours with doc lookups but no panic → keep Track B/C, apply 1.5x calendar multiplier to every bot/UI estimate.
@@ -488,9 +495,15 @@ R15 replaces the simple ledger with Drift-shaped `SpotPosition` + vault logic.
 - **Study:** `programs/drift/src/controller/position.rs::update_position_and_market`
 - **Neurons:** R5 (position), R7 (fills trigger updates)
 - **Pre-flight:** run the Track B/C Baseline Gate from §4 before opening this ring. Lock the resulting band into the roadmap so bot/UI scope is not discovered late at R10.
+- **Current status (2026-05-18):** Ring 8 is CLOSED. All four build slices shipped. Study Slice 1 (delta vs folder, update labels, quote types), Study Slice 2 (Drift entry/break-even/PnL math for reduce/close/flip), Study Slice 3 (user-only wrapper), Study/Build Slice 4 (source-mapped remaining 12 responsibilities, built `PerpMarket`, market counters, step size validation). Final verification: 114 tests, `cargo clippy -- -D warnings` clean, `cargo fmt -- --check` clean. Parked: 6 long/short aggregates + `market.amm.quote_asset_amount` (Ring 9), funding rate sync (Ring 14), events/`base_asset_amount_with_amm` (callers + Ring 9).
 - **Build:**
-  - `math/position.rs::calculate_position_delta` — pure fn: given fill size/price/direction + existing position, returns new `(base, quote_entry, quote_break_even, realized_pnl)`
-  - `controller/position.rs::update_position_and_market` — applies delta; handles 4 cases (open / increase / decrease / close-and-flip)
+  - `controller/position.rs::PositionDelta` — ✅ shipped 2026-05-16
+  - `math/position.rs::PositionUpdateType` — ✅ shipped 2026-05-16
+  - `math/position.rs::get_position_update_type` — ✅ shipped 2026-05-16
+  - `math/position.rs::get_new_position_amounts` — ✅ shipped 2026-05-16
+  - `math/position.rs::calculate_position_delta` — ✅ shipped 2026-05-17
+  - `controller/position.rs::update_position_and_market` — ✅ user-only wrapper shipped 2026-05-17, market counters + step size validation added 2026-05-18
+  - `state/perp_market.rs::PerpMarket` — ✅ shipped 2026-05-18 with `number_of_users`, `number_of_users_with_base`, `market_index`, `order_step_size`
   - Close-and-flip: opening opposite side beyond current size realizes PnL on the closed portion, opens residual on the new side
 - **Tests:** 🎯 four-case vector matrix lifted from `controller/position.rs::tests`; each of open/increase/decrease/flip has an exact Drift-match test. Add one round-trip invariant: open then close at same price changes collateral only by fees.
 - **Est.:** 3 days
@@ -518,6 +531,7 @@ R15 replaces the simple ledger with Drift-shaped `SpotPosition` + vault logic.
 - **Tests:** 🎯 heavy vector matrix from `math/amm.rs::tests` — covers swap, bounds hit, concentration enforcement, min/max reserve guards. Add property tests: reserves stay inside min/max bounds; invalid swaps fail before mutating state.
 - **Est.:** 10-14 days (biggest ring so far; do not compress the vector matrix)
 - **Demo:** "Here's a fill through a real vAMM — mark price before/after, reserves before/after, match my spreadsheet."
+- **Current status (2026-05-19):** Ring 9 is CLOSED. Shipped: `Amm` struct, `PerpMarket` account shape, `swap_base_asset`, `update_amm_reserves`, `initialize_perp_market`, quote entry/break-even aggregate wiring in `update_position_and_market`, real AMM fill path through `fill_perp_order`, price-wall validation, fill receipt event, manual `User` deserialize stack fix with roundtrip test, and AMM vector/boundary/no-mutation tests. Final check: focused AMM tests 16 passed, full `cargo test` 147 passed, `cargo fmt -- --check` clean, `cargo clippy -- -D warnings` clean, and `anchor build` exits 0. Optional writeup skipped by user. Concept revision debt remains: AI-assisted fill wiring and aggregate/sign mental model must be reviewed before Ring 10/M1.
 
 #### Ring 10 — *Truth from outside (oracles)* [`learning R10`]
 - **Concept:** OraclePriceData, OracleSource, TWAP, staleness
@@ -879,6 +893,8 @@ still tracked separately before the full R7/R8 trading demo:
 | R5 | `PerpPosition` struct typed | `User` account · quote-collateral spine · `initialize_user` ix · `deposit_test_collateral` ix · anchor test |
 | R6 | `Order`, `OrderType`, `OrderStatus`, `PositionDirection`, `OrderParams`, `User.orders`, position shelf helpers, `place_perp_order`, `OrderRecord`, Anchor instruction wrapper, and focused tests shipped | Future rings activate fill behavior, Trigger/Oracle execution, and deeper margin/risk checks |
 | R7 | CLOSED 2026-05-14. Study Slice 1 complete. Study Slice 2 closed: price crossing, maker direction, maker price as matched fill price, maker-vs-AMM ordering, `AMM(Some(price))`, `AMM(None)`, empty route list, Alice pipeline, focused `OrderActionRecord` field tour, cleanup/cancel taxonomy, and maker role-gate story. | Drift-mirrored helper shell shipped and verified: order progress, open bid/ask decrease, open-order counters, AMM-style `OrderActionRecord`, post-receipt cleanup, `FillMode`, auction price, fixed-wall order price, `FillMode::get_limit_price`, `PerpFulfillmentMethod`, crossing and same-market/opposite-side gates, Order readiness helpers, `is_maker_for_taker`, matched quote/fill math, expiry cleanup, reduce-only invalidation, and no-self-reward keeper gate. Final check: fmt, check, 96 tests, clippy clean. Parked: real position mutation R8, AMM swap R9, oracle/price-band internals R10/R11/R12, deep fees R13, full matching engine R23 |
+| R8 | CLOSED 2026-05-18. Study Slice 1 closed: `PositionDelta` receipt vs `PerpPosition` folder, update labels, raw quote vs entry quote, break-even basics, realized/unrealized PnL, reduce/close/flip intuition. Study Slice 2 closed: Drift entry/break-even/PnL source mapping for reduce/close/flip, signed quote behavior, and flip receipt splitting. Build Slice 1 shipped: `PositionDelta`, `PositionUpdateType`, `get_position_update_type`, `get_new_position_amounts`, focused tests, overflow check. Build Slice 2 shipped: `calculate_position_delta` plus i128-backed quote portion helper. Build Slice 3 shipped: user-only `update_position_and_market` wrapper with calculate-first/mutate-last behavior. Build Slice 4 shipped: `PerpMarket`, market counters, and step size validation. Final check: fmt, 114 tests, clippy clean. | Parked by design: 6 long/short aggregates + `market.amm.quote_asset_amount` for Ring 9, funding sync for Ring 14, event/full-fill integration for later M1 wiring |
+| R9 | CLOSED 2026-05-19. Shipped: `Amm` struct with reserves/peg/OI/quote aggregates/bounds, `math/amm.rs::swap_base_asset`, `update_amm_reserves`, `initialize_perp_market`, `update_position_and_market` quote entry/break-even aggregate wiring, real AMM fill path, price-wall validation, fill event receipt, manual `User` deserialize stack fix, and AMM vector/boundary/no-mutation test pack. Final check: focused AMM tests 16 passed, full `cargo test` 147 passed, fmt clean, clippy clean, `anchor build` exits 0. | Concept revision debt before Ring 10/M1: AI-assisted fill wiring and aggregate/sign mental model need line-by-line review. Optional Ring 9 writeup skipped by user |
 
 Hard gate status: the remaining R4-R5 foundation debt is intentionally parked
 for the small R7 order-progress build slice only. It is saved for later, not
@@ -968,8 +984,8 @@ Daily minimum during build catch-up:
 - [ ] R5 · `PerpPosition` + quote-collateral spine + `initialize_user` *(struct typed; account + ix + test still owed)*
 - [x] R6 · `Order` struct + `place_perp_order` *(Market/Limit storage, unsupported order rejection, reduce-only placement checks, `OrderRecord`, Anchor wrapper, tests, clippy clean)*
 - [x] R7 · Dutch auction + fill flow helpers *(closed 2026-05-14: order progress, open bid/ask decrease, open-order counter helpers, fill receipt builder, post-receipt counter cleanup, FillMode basics, simplified auction price helper, fixed-wall order price helper, `FillMode::get_limit_price`, `PerpFulfillmentMethod`, crossing/role gates, matched fill math, expiry/reduce-only cleanup, no-self-reward keeper gate; no mini-only fake fill wrapper; fmt/check/96 tests/clippy clean)*
-- [ ] R8 · `update_position_and_market` — **🏁 M1**
-- [ ] R9 · Full vAMM + swap_base_asset
+- [x] R8 · `update_position_and_market` — **🏁 M1** *(closed 2026-05-18: user-position mutation, market counters, step-size guard; fmt/114 tests/clippy clean)*
+- [x] R9 · Full vAMM + swap_base_asset *(closed 2026-05-19: AMM fields, swap math, reserve mutation, market init, position aggregates, real AMM fill path, price wall, event receipt, heavy AMM vectors; 147 tests/fmt/clippy/anchor build clean)*
 - [ ] R10 · Pyth integration + read-only keeper vs real Drift
 - [ ] R11 · Static spreads
 - [ ] R12 · Dynamic spreads (inventory + volatility + revenue retreat)

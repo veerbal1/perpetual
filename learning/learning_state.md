@@ -1,9 +1,9 @@
 # LEARNING STATE
 
 ## Current Position
-- Ring: 8 of 26
-- Active Concept: Ring 8 opening next — position mutation boundary after Ring 7's fill helpers. Ring 7 closed on 2026-05-14 as a Drift-shaped helper shell, with real position update deliberately owned by Ring 8.
-- Status: READY TO OPEN RING 8 - Ring 7 helper build is closed with a clean boundary. Completed Drift-mirrored helper slices: `Order::get_base_asset_amount_unfilled`, `Order::update_open_bids_and_asks`, `controller/orders.rs::update_order_after_fill`, `controller/position.rs::decrease_open_bids_and_asks` with update flag and zero clamps, `User::decrement_open_orders`, focused fill receipt builder slice (`OrderAction`, `OrderActionExplanation`, `OrderActionRecord`, `get_order_action_record`), post-receipt counter cleanup helper `decrement_open_orders_after_full_fill`, Drift-shaped `FillMode` with `is_liquidation` / `is_ioc`, `FillMode::get_limit_price`, `state::fulfillment::PerpFulfillmentMethod`, `math::matching::do_orders_cross`, `math::matching::are_orders_same_market_but_different_sides` (perp-only simplification without `market_type`), `math::matching::is_maker_for_taker`, `math::orders::calculate_quote_asset_amount_for_maker_order`, `math::matching::calculate_fill_for_matched_orders`, `math::orders::should_expire_order`, Drift-shaped `math::orders::should_cancel_reduce_only_order`, and `controller/orders.rs::should_reward_keeper`. Latest assistant verification: `cargo fmt -- --check`, `cargo check`, full `cargo test` passed with 96 tests, and `cargo clippy -- -D warnings` clean on 2026-05-14. R4/R5 foundation debt remains tracked before full M1 demo. Parked boundaries: real position mutation R8, AMM reserve swap R9, oracle internals R10, full fee pools/referrers R13, full matching engine R23.
+- Ring: 9 of 26 — CLOSED 2026-05-19
+- Active Concept: Ring 1→9 revision pass before opening Ring 10
+- Status: Ring 9 code/build track closed. Shipped: `Amm` struct with 16 fields in `state/perp_market.rs`; `swap_base_asset`; `update_amm_reserves`; `initialize_perp_market`; quote entry/break-even aggregates in `update_position_and_market`; real AMM fill path via `fill_perp_order` / `handle_fill_perp_order_amm`; price-wall validation; fill event receipt; manual `User` deserialize stack fix with roundtrip test; heavy AMM vector/boundary/no-mutation test pack. Final verification on 2026-05-19: focused AMM tests 16 passed, full `cargo test` 147 passed, `cargo fmt -- --check` clean, `cargo clippy -- -D warnings` clean, `anchor build` exits 0. Optional Ring 9 writeup skipped by user. Important mastery note: user is weak on `update_position_and_market` aggregate/sign concepts and AI-assisted Ring 9 fill wiring; schedule dedicated revision before Ring 10/M1/interview reliance.
 
 ## Ring 6 Chunk Plan
 - [x] 1/6 — Spine: Order vs PerpPosition sign encoding split; PositionDirection enum payoff
@@ -41,6 +41,73 @@
 
 ## Parked Questions
 - 2026-05-08 — User asked: "If AMM fills a user's cheaper limit order, then later fills a higher-priced order, is that fair?" Current-slice answer belongs to Ring 7 Study Slice 2: AMM can only fill inside the user's price wall and its own route checks. Deeper answer belongs to Ring 9 (AMM reserve/price impact and inventory), Ring 11-12 (spread/protection), and Ring 13 (fees): how AMM prices, protects itself, and whether fills are economically fair/sustainable.
+- 2026-05-18 — User asked during Study Slice 4: "cumulative_funding_rate wala check samajh nahi aaya. Kya ye abhi samajhna zaroori hai?" Parked: funding rate sync check inside `update_position_and_market` (position.last_cumulative_funding_rate must match market.amm.cumulative_funding_rate). Full concept belongs to Ring 14. Current tiny answer: "Trade karne se pehle purane bill settle hone chahiye."
+- 2026-05-18 — Ring 8 parked items status: long/short base aggregates, quote entry/break-even aggregates, AMM reserve swap, `base_asset_amount_with_amm`, and fill event wiring were resolved in Ring 9. Funding rate sync remains parked for Ring 14.
+
+## Ring 8 Preflight Gate
+- [x] Track B / TypeScript-Solana readout slice — user wrote `mini-drift/scripts/pyth-sol-usd.ts`; assistant verified on 2026-05-14 that `npx tsc --noEmit` passes, Prettier passes, and the script successfully reads devnet Pyth SOL/USD PriceUpdateV2 data after network approval. Live run printed price, confidence, feed id, verification level, context slot, posted slot, and publish times.
+- [x] Track C / React wallet-balance readout slice — user wrote `mini-drift/app/index.html`; assistant verified on 2026-05-14 that Prettier passes and the browser output shows devnet, connected public key, disconnect button, and `Balance: 5 SOL`.
+- Result: Band 1. Both slices shipped cleanly as tiny readout stubs, so Track B/C can stay as planned. Ring 8 may open.
+
+## Ring 9 Chunk Plan
+- [x] Chunks 1-4 — AMM shelves (base/quote reserve), sqrt_k (depth), peg_multiplier (anchor), terminal_quote_asset_reserve (balance point)
+- [x] Chunks 5-6 — base_asset_amount_with_amm (net exposure), base_asset_amount_long/short (OI tracking)
+- [x] Chunks 7-8 — quote_entry/break_even aggregates, concentration_coef, min/max_base_asset_reserve (bounds)
+- [x] Swap math — constant product formula in code, base→quote conversion, concentration bounds, `swap_base_asset`
+- [x] AMM mutation — `update_amm_reserves` updates reserves + `base_asset_amount_with_amm` + base long/short OI
+- [x] Market init — `initialize_perp_market` seeds reserves, sqrt_k, peg, terminal quote, bounds, order step size
+- [x] Position aggregate wiring — `update_position_and_market` now updates quote entry/break-even long/short aggregates; user flagged this area as weak and needing future revision
+- [x] Aggregate test pack — open long, open short, increase long, close long, flip long-to-short; 130 tests/clippy/fmt clean on 2026-05-19
+- [x] Real AMM fill flow wiring — AI-assisted build completed and reviewed: market/order/position validation, AMM quote calculation, price-wall validation, calculate-first/mutate-last state commit, open bid/ask cleanup, order progress, event receipt, and Anchor `fill_perp_order` entrypoint
+- [x] Heavy AMM vector/property tests — 8 AMM vector/boundary/no-mutation tests added; focused AMM tests 16 passed
+- [x] Optional Ring 9 writeup — skipped by user
+- [x] Ring 9 final verification — `cargo fmt -- --check`, focused AMM tests, full `cargo test` 147 passed, `cargo clippy -- -D warnings`, and `anchor build` clean enough to close
+
+### REVISION DEBT: Ring 9 · AMM Fill Flow (2026-05-19)
+
+**Why parked:** User was cognitively overloaded at this point. Fill flow is the most wiring-heavy piece in the perp engine. Code was AI-assisted and reviewed clean, but concept mastery must be revisited when fresh.
+
+**What fill actually is:** NOT new logic. Fill = sequencing 6 pieces that are ALREADY built:
+- `math/amm.rs::update_amm_reserves` (swap math + reserve mutation + OI tracking)
+- `controller/position.rs::update_position_and_market` (position mutation + aggregate wiring)
+- `controller/orders.rs::update_order_after_fill` (order progress + fill status)
+- `controller/orders.rs::decrement_open_orders_after_full_fill` (counter cleanup)
+- `user.force_get_perp_position_index` (find position shelf)
+- `Order.get_base_asset_amount_unfilled` (remaining size)
+
+**6-Step Flow (Plain English, Zero Code):**
+
+Step 1: Order se pucho — "kitna abhi tak nahi bhara?" → `base_asset_amount_unfilled`
+
+Step 2: Direction table (this is the ONLY new concept — the mapping):
+
+| Taker Order | AMM Direction | User's position delta |
+|---|---|---|
+| Long (buy) | Subtract (AMM se base nikalta hai) | +base, −quote |
+| Short (sell) | Add (AMM mein base daalta hai) | −base, +quote |
+
+Step 3: AMM swap — `update_amm_reserves(amm, swap_amount, direction)` → returns quote_delta
+
+Step 4: `PositionDelta` banao — `base_asset_amount` (signed i64 from table) + `quote_asset_amount` (signed i64 from table)
+
+Step 5: Position mutate — `update_position_and_market(position, delta, market)`
+
+Step 6: Order mutate — `update_order_after_fill(order, base, quote)` → if fully filled, `decrement_open_orders_after_full_fill(user, position_index, is_filled)`
+
+**Files that were created/edited in the AI-assisted build:**
+- New: `instructions/fill.rs` — `handle_fill_perp_order_amm`
+- Edit: `instructions/mod.rs` — wire `pub mod fill`
+- Edit: `lib.rs` — `fill_perp_order` entrypoint + `#[derive(Accounts)] FillPerpOrder`
+
+**When to revisit:** During the Ring 1→9 revision pass, before Ring 10 opens, and again before any M1 demo. User must be able to cold-explain the 6-step flow and the direction mapping table without looking at code.
+
+## Ring 8 Chunk Plan (for reference)
+- [x] Study Slice 1 - CLOSED 2026-05-16: delta vs position folder; update labels open/increase/reduce/close/flip; raw quote as running cash/result ledger; entry quote as remaining live position cost; break-even quote as fee-aware entry; realized vs unrealized PnL; reduce/close/flip intuition using Alice story. Important locked neurons: `PositionDelta` is temporary receipt/change, `PerpPosition` is permanent storage; `raw quote` alone is not final PnL while base is non-zero; `entry quote` tracks remaining cost, not latest sell price; flip = close old side + open leftover opposite side.
+- [x] Build Slice 1 - CLOSED 2026-05-16: user built `controller::position::PositionDelta`, `math::position::PositionUpdateType`, `math::position::get_position_update_type`, and `math::position::get_new_position_amounts`. Tests cover all five update labels, raw base/quote addition, and base overflow failure. Final verification: `cargo fmt -- --check`, full `cargo test` 99 passed, and `cargo clippy -- -D warnings` clean.
+- [x] Study Slice 2 - CLOSED 2026-05-17: story/scene-mode map of Drift source for entry quote, break-even quote, and realized PnL updates inside `update_position_and_market`, especially reduce/close/flip. Locked neurons: reduce/close cut old entry and break-even quote by `abs(delta_base) / abs(current_base)`; realized PnL is removed old quote plus fill quote; flip splits the fill receipt into old-side closing quote and leftover new-position quote; human cost can be positive while Drift quote remains signed.
+- [x] Build Slice 2 - CLOSED 2026-05-17: user built `math::position::calculate_position_delta` and `calculate_quote_portion` with i128 intermediate multiplication/division before checked i64 conversion. Tests cover increase, long reduce profit, short reduce profit, close, flip, and i128 intermediate overflow safety. Verification: `cargo fmt -- --check`, focused tests, full `cargo test` 105 passed, and `cargo clippy -- -D warnings` clean.
+- [x] Build Slice 3 - CLOSED 2026-05-17: user built the smallest Drift-shaped `controller::position::update_position_and_market` wrapper that calls `get_position_update_type`, `get_new_position_amounts`, and `calculate_position_delta`, then mutates the user `PerpPosition` only. Tests cover increase, long reduce profit, close, flip, and math-error no-half-update. Verification: `cargo fmt -- --check`, focused tests, full `cargo test` 110 passed, and `cargo clippy -- -D warnings` clean.
+- [x] Study/Build Slice 4 - CLOSED 2026-05-18: source-mapped all 12 responsibilities inside Drift's `update_position_and_market`. Built: `PerpMarket` struct, market counter logic (`number_of_users`, `number_of_users_with_base`), step size validation. Parked: 6 long/short aggregates + `market.amm.quote_asset_amount` (Ring 9 AMM struct needed), funding rate sync (Ring 14), events/`base_asset_amount_with_amm` (callers + Ring 9). 114 tests, clippy clean.
 
 ## ACTIVE STYLE DIRECTIVE (supersedes all prior style notes)
 - Set 2026-04-20 mid-Ring-5. User reported HEADACHES from constant atomic-Socratic questioning ("answering a lot of questions after each interaction").
@@ -73,10 +140,10 @@
 - [x] Ring 5: PerpPosition struct, base/quote, direction -- COMPLETED 2026-04-20
 - [x] Ring 6: Order struct, types, lifecycle, reduce-only, post-only -- COMPLETED 2026-05-03
 - [x] Ring 7: Dutch auctions, keepers, fill flow, fees-on-fill -- COMPLETED 2026-05-14 as helper shell with strict R8/R9/R13/R23 boundaries
-- [ ] Ring 8: Position updates: open/increase/decrease/close -- READY TO OPEN
+- [x] Ring 8: Position updates: open/increase/decrease/close, PositionDelta, market counters — CLOSED 2026-05-18
 
 ### PHASE 4 - THE PRICING ENGINE
-- [ ] Ring 9: AMM internals: reserves, sqrt_k, exposure, OI, bounds
+- [x] Ring 9: AMM internals: reserves, sqrt_k, exposure, OI, bounds — CLOSED 2026-05-19 (real AMM fill path + heavy AMM vectors shipped; 147 tests, clippy clean, anchor build exits 0)
 - [ ] Ring 10: Oracles, price feeds, TWAP, strict pricing
 - [ ] Ring 11: Spreads: what they are, bid/ask, asymmetry
 - [ ] Ring 12: Living spreads: inventory, volatility, revenue retreat
@@ -104,6 +171,15 @@
 - [ ] Ring 26: Special modes & infrastructure: high leverage, isolated, prediction, guard rails, events, full spot deep dive, DEX
 
 ## Mastery Notes
+
+### Ring 8
+- Ring 8 closed 2026-05-18 across 4 build slices with 114 tests.
+- User correctly identified that counters (`number_of_users`, `number_of_users_with_base`) only change on Open/Close, not Increase/Reduce/Flip. Initial confusion: thought these tracked base/quote size changes, not user headcount. Clarified quickly.
+- User independently raised the question of whether funding rate sync check belongs to current ring. Got parked correctly for Ring 14.
+- User correctly identified that `PerpMarket` and `market` parameter were missing from their code.
+- Build Slice 1-3 was done in prior sessions (2026-05-16 to 2026-05-17), Build Slice 4 completed today (2026-05-18) in one session: PerpMarket struct, error variant, counter logic, step size validation, 9 tests.
+- Teaching mode that worked: Hinglish, very small chunks (one per message), real-life scene analogies (general store, sabzi mandi, restaurant chef/waiter, electricity bill).
+- User showed good pacing — asked to skip docs writeup which is fine. Core deliverable is working code + tests.
 
 ### Ring 7
 - Roadmap gap found 2026-05-04 during Dutch auction study: teaching `calculate_auction_price` without first teaching how Drift derives `auction_start_price`, `auction_end_price`, and `auction_duration` created a knowledge gap. Ring 7 roadmap updated to include `controller/orders.rs::get_auction_params`, `math/auction.rs::calculate_auction_prices`, `state/order_params.rs::derive_market_order_auction_params` / `get_auction_duration`, tick standardization, price-band validation, and `PerpMarket::amm_can_fill_order`.
@@ -257,7 +333,10 @@
 - step_size (minimum valid trade unit; reduce-only cleanup cancels if remaining fillable amount is below it)
 - keeper reward gate (external keeper can be rewarded for cleanup; self-cleanup does not receive keeper reward)
 
-- Ring 8 next - open position mutation: connect Ring 7's `(base_filled, quote_filled)` result into PerpPosition changes. First target is the smallest Drift-shaped position delta helper before any full fill wrapper.
-- Delivery: keep the tiny-neuron style. One helper contract at a time: plain meaning -> state table -> helper input/output -> Rust syntax -> tests.
-- Forward refs to keep parked: Ring 9 (AMM reserve swap and price impact), Ring 10 (Oracle order type's price source), Ring 13 (deep fee model and fee pools), Ring 23 (full maker/taker matching engine).
-- Forward refs still outstanding from earlier rings: Ring 9 (price impact, sqrt_k, open interest), Ring 10 (oracle mechanics), Ring 11 (bid/ask spread), Ring 14 (funding rate, last_cumulative_funding_rate on PerpPosition), Ring 22 (repeg), Ring 24 (LPs / virtual reserve origination).
+- Ring 8 CLOSED 2026-05-18 — all 4 build slices shipped, 114 tests, clippy clean.
+- Ring 9 CLOSED 2026-05-19 — AMM fields, swap math, reserve mutation, market init, position aggregates, real AMM fill path, fill price wall, event receipt, heavy AMM vectors, 147 tests, clippy clean, anchor build exits 0.
+- Next Up — Ring 1→9 revision pass before Ring 10. Focus: rebuild mental ownership of the code line by line, especially `update_position_and_market`, AMM fill direction mapping, price-wall validation, and manual `User` deserialize.
+- Teaser: "Ab hum naye feature nahi kholenge. Pehle purane code ko apna banayenge."
+- Delivery: keep the tiny-neuron story mode. One helper at a time: plain meaning -> state table -> helper input/output -> Rust syntax -> tests.
+- Forward refs to keep parked: Ring 10 (Oracle order type's price source), Ring 11 (bid/ask spread), Ring 13 (deep fee model and fee pools), Ring 23 (full maker/taker matching engine).
+- Forward refs still outstanding from earlier rings: Ring 10 (oracle mechanics), Ring 11 (bid/ask spread), Ring 14 (funding rate, last_cumulative_funding_rate on PerpPosition), Ring 22 (repeg), Ring 24 (LPs / virtual reserve origination).
